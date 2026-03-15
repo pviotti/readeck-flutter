@@ -26,6 +26,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
   int _totalCount = 0;
   bool _loading = true;
   bool _loadingMore = false;
+  bool _showArchived = false;
   String? _error;
 
   static const _pageSize = 30;
@@ -50,7 +51,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
     });
 
     try {
-      final response = await _api.getBookmarks(limit: _pageSize, offset: 0);
+      final response = await _api.getBookmarks(limit: _pageSize, offset: 0, archived: _showArchived);
       setState(() {
         _bookmarks
           ..clear()
@@ -72,6 +73,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
       final response = await _api.getBookmarks(
         limit: _pageSize,
         offset: _bookmarks.length,
+        archived: _showArchived,
       );
       setState(() {
         _bookmarks.addAll(response.bookmarks);
@@ -82,6 +84,16 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
     } finally {
       setState(() => _loadingMore = false);
     }
+  }
+
+  void _switchView(bool archived) {
+    if (_showArchived == archived) return;
+    setState(() {
+      _showArchived = archived;
+      _bookmarks.clear();
+      _totalCount = 0;
+    });
+    _loadBookmarks();
   }
 
   Future<void> _logout() async {
@@ -112,12 +124,38 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Unread'),
+        title: Text(_showArchived ? 'Read' : 'Unread'),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
             tooltip: 'Sign out',
             onPressed: _logout,
+          ),
+        ],
+      ),
+      drawer: NavigationDrawer(
+        selectedIndex: _showArchived ? 1 : 0,
+        onDestinationSelected: (index) {
+          Navigator.of(context).pop();
+          _switchView(index == 1);
+        },
+        children: const [
+          Padding(
+            padding: EdgeInsets.fromLTRB(28, 16, 16, 10),
+            child: Text(
+              'Bookmarks',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+          ),
+          NavigationDrawerDestination(
+            icon: Icon(Icons.inbox_outlined),
+            selectedIcon: Icon(Icons.inbox),
+            label: Text('Unread'),
+          ),
+          NavigationDrawerDestination(
+            icon: Icon(Icons.archive_outlined),
+            selectedIcon: Icon(Icons.archive),
+            label: Text('Read'),
           ),
         ],
       ),

@@ -59,7 +59,8 @@ class _LoginScreenState extends State<LoginScreen> {
       });
     } catch (e) {
       setState(() {
-        _error = 'Could not connect. Check the URL and your network.';
+        _error =
+            'Could not connect. Check the URL and your network. Exception: $e';
       });
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -90,16 +91,16 @@ class _LoginScreenState extends State<LoginScreen> {
                     'Readeck',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        ),
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'Connect to your instance',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
                   ),
                   const SizedBox(height: 32),
                   TextFormField(

@@ -55,14 +55,15 @@ class ReadeckApi {
     int offset = 0,
     bool archived = false,
   }) async {
+    final params = <String, String>{
+      'limit': limit.toString(),
+      'offset': offset.toString(),
+      'is_archived': archived.toString(),
+      'sort': '-created',
+    };
+
     final response = await _client.get(
-      _uri('/bookmarks', {
-        'read_status': 'unread',
-        'limit': limit.toString(),
-        'offset': offset.toString(),
-        'is_archived': archived.toString(),
-        'sort': '-created',
-      }),
+      _uri('/bookmarks', params),
       headers: _headers,
     );
 
