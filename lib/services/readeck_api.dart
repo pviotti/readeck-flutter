@@ -53,12 +53,14 @@ class ReadeckApi {
   Future<BookmarksResponse> getBookmarks({
     int limit = 30,
     int offset = 0,
+    bool archived = false,
   }) async {
     final response = await _client.get(
       _uri('/bookmarks', {
         'read_status': 'unread',
         'limit': limit.toString(),
         'offset': offset.toString(),
+        'is_archived': archived.toString(),
         'sort': '-created',
       }),
       headers: _headers,
