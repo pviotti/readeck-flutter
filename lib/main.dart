@@ -1,20 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
-void main() {
-  runApp(const MainApp());
+import 'screens/bookmarks_screen.dart';
+import 'screens/login_screen.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final prefs = await SharedPreferences.getInstance();
+  final baseUrl = prefs.getString('base_url');
+  final token = prefs.getString('token');
+
+  runApp(ReadeckApp(baseUrl: baseUrl, token: token));
 }
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+class ReadeckApp extends StatelessWidget {
+  final String? baseUrl;
+  final String? token;
+
+  const ReadeckApp({super.key, this.baseUrl, this.token});
 
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: Text('Hello World!'),
-        ),
+    final loggedIn = baseUrl != null && token != null;
+
+    return MaterialApp(
+      title: 'Readeck',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        colorSchemeSeed: const Color(0xFF5B6ABF),
+        brightness: Brightness.light,
+        useMaterial3: true,
       ),
+      darkTheme: ThemeData(
+        colorSchemeSeed: const Color(0xFF5B6ABF),
+        brightness: Brightness.dark,
+        useMaterial3: true,
+      ),
+      home: loggedIn
+          ? BookmarksScreen(baseUrl: baseUrl!, token: token!)
+          : const LoginScreen(),
     );
   }
 }
