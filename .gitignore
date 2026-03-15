@@ -1,4 +1,5 @@
 api-docs/
+.dev/
 
 # Miscellaneous
 *.class
