@@ -97,6 +97,24 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
   }
 
   Future<void> _logout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sign out'),
+        content: const Text('Are you sure you want to sign out?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Sign out'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove('base_url');
     await prefs.remove('token');
@@ -125,13 +143,6 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(_showArchived ? 'Read' : 'Unread'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Sign out',
-            onPressed: _logout,
-          ),
-        ],
       ),
       drawer: NavigationDrawer(
         selectedIndex: _showArchived ? 1 : 0,
@@ -139,23 +150,29 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
           Navigator.of(context).pop();
           _switchView(index == 1);
         },
-        children: const [
-          Padding(
+        children: [
+          const Padding(
             padding: EdgeInsets.fromLTRB(28, 16, 16, 10),
             child: Text(
               'Bookmarks',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
-          NavigationDrawerDestination(
+          const NavigationDrawerDestination(
             icon: Icon(Icons.inbox_outlined),
             selectedIcon: Icon(Icons.inbox),
             label: Text('Unread'),
           ),
-          NavigationDrawerDestination(
+          const NavigationDrawerDestination(
             icon: Icon(Icons.archive_outlined),
             selectedIcon: Icon(Icons.archive),
             label: Text('Read'),
+          ),
+          const Divider(indent: 16, endIndent: 16),
+          ListTile(
+            leading: Icon(Icons.logout),
+            title: Text('Sign out'),
+            onTap: _logout,
           ),
         ],
       ),
