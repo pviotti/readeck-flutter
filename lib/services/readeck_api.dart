@@ -81,6 +81,17 @@ class ReadeckApi {
     return BookmarksResponse(bookmarks: bookmarks, totalCount: totalCount);
   }
 
+  Future<void> archiveBookmark(String id) async {
+    final response = await _client.patch(
+      _uri('/bookmarks/$id'),
+      headers: {..._headers, 'Content-Type': 'application/json'},
+      body: jsonEncode({'is_archived': true}),
+    );
+    if (response.statusCode != 200) {
+      throw ReadeckApiException(response.statusCode, response.body);
+    }
+  }
+
   void dispose() {
     _client.close();
   }

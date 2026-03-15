@@ -124,6 +124,36 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
     );
   }
 
+  Future<void> _confirmArchive(Bookmark bookmark) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Archive bookmark'),
+        content: Text('Archive "${bookmark.title}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Archive'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await _api.archiveBookmark(bookmark.id);
+      _loadBookmarks();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to archive bookmark.')),
+      );
+    }
+  }
+
   Future<void> _openBookmark(Bookmark bookmark) async {
     final uri = Uri.tryParse(bookmark.url);
     if (uri != null && await canLaunchUrl(uri)) {
@@ -223,6 +253,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
             bookmark: _bookmarks[index],
             thumbnailUrl: _thumbnailUrl(_bookmarks[index]),
             onTap: () => _openBookmark(_bookmarks[index]),
+            onLongPress: () => _confirmArchive(_bookmarks[index]),
           );
         },
       ),
@@ -234,11 +265,13 @@ class _BookmarkTile extends StatelessWidget {
   final Bookmark bookmark;
   final String thumbnailUrl;
   final VoidCallback onTap;
+  final VoidCallback onLongPress;
 
   const _BookmarkTile({
     required this.bookmark,
     required this.thumbnailUrl,
     required this.onTap,
+    required this.onLongPress,
   });
 
   @override
@@ -247,6 +280,7 @@ class _BookmarkTile extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
+      onLongPress: onLongPress,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
