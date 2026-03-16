@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../services/readeck_api.dart';
 import 'bookmarks_screen.dart';
@@ -25,6 +25,8 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  final _secureStorage = const FlutterSecureStorage();
+
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -41,9 +43,8 @@ class _LoginScreenState extends State<LoginScreen> {
       await api.getProfile();
       api.dispose();
 
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString('base_url', url);
-      await prefs.setString('token', token);
+      await _secureStorage.write(key: 'base_url', value: url);
+      await _secureStorage.write(key: 'token', value: token);
 
       if (!mounted) return;
       Navigator.of(context).pushReplacement(

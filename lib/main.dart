@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import 'screens/bookmarks_screen.dart';
 import 'screens/login_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  final prefs = await SharedPreferences.getInstance();
-  final baseUrl = prefs.getString('base_url');
-  final token = prefs.getString('token');
+  final secureStorage = FlutterSecureStorage();
+  final baseUrl = await secureStorage.read(key: 'base_url');
+  final token = await secureStorage.read(key: 'token');
 
   runApp(ReadeckApp(baseUrl: baseUrl, token: token));
 }
