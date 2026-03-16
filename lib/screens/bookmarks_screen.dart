@@ -3,6 +3,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/bookmark.dart';
+import '../repositories/bookmark_repository.dart';
+import '../services/bookmark_cache_database.dart';
 import '../services/readeck_api.dart';
 import 'login_screen.dart';
 
@@ -22,12 +24,15 @@ class BookmarksScreen extends StatefulWidget {
 
 class _BookmarksScreenState extends State<BookmarksScreen> {
   late final ReadeckApi _api;
+  late final BookmarkRepository _repository;
   final List<Bookmark> _bookmarks = [];
   int _totalCount = 0;
   bool _loading = true;
   bool _loadingMore = false;
   bool _showArchived = false;
+  bool _showingCachedData = false;
   String? _error;
+  int _loadVersion = 0;
 
   static const _pageSize = 30;
 
@@ -35,33 +40,51 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
   void initState() {
     super.initState();
     _api = ReadeckApi(baseUrl: widget.baseUrl, token: widget.token);
+    _repository = BookmarkRepository(
+      api: _api,
+      cacheDb: BookmarkCacheDatabase(),
+    );
     _loadBookmarks();
   }
 
   @override
   void dispose() {
+    _repository.dispose();
     _api.dispose();
     super.dispose();
   }
 
   Future<void> _loadBookmarks() async {
+    final currentLoad = ++_loadVersion;
+
     setState(() {
       _loading = true;
       _error = null;
+      _showingCachedData = false;
     });
 
     try {
-      final response = await _api.getBookmarks(limit: _pageSize, offset: 0, archived: _showArchived);
-      setState(() {
-        _bookmarks
-          ..clear()
-          ..addAll(response.bookmarks);
-        _totalCount = response.totalCount;
-      });
+      await _repository
+          .streamFirstPage(archived: _showArchived, limit: _pageSize)
+          .listen((value) {
+            if (!mounted || currentLoad != _loadVersion) return;
+            setState(() {
+              _bookmarks
+                ..clear()
+                ..addAll(value.bookmarks);
+              _totalCount = value.totalCount;
+              _showingCachedData = value.fromCache;
+              _error = null;
+            });
+          })
+          .asFuture<void>();
     } catch (e) {
+      if (!mounted || currentLoad != _loadVersion) return;
       setState(() => _error = 'Failed to load bookmarks.');
     } finally {
-      setState(() => _loading = false);
+      if (mounted && currentLoad == _loadVersion) {
+        setState(() => _loading = false);
+      }
     }
   }
 
@@ -70,7 +93,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
 
     setState(() => _loadingMore = true);
     try {
-      final response = await _api.getBookmarks(
+      final response = await _repository.fetchPage(
         limit: _pageSize,
         offset: _bookmarks.length,
         archived: _showArchived,
@@ -119,9 +142,9 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
     await secureStorage.delete(key: 'base_url');
     await secureStorage.delete(key: 'token');
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-    );
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
   }
 
   Future<void> _confirmArchive(Bookmark bookmark) async {
@@ -144,8 +167,8 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
     );
     if (confirmed != true) return;
     try {
-      await _api.archiveBookmark(bookmark.id);
-      _loadBookmarks();
+      await _repository.archiveBookmark(bookmark.id);
+      await _loadBookmarks();
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -171,9 +194,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(_showArchived ? 'Read' : 'Unread'),
-      ),
+      appBar: AppBar(title: Text(_showArchived ? 'Read' : 'Unread')),
       drawer: NavigationDrawer(
         selectedIndex: _showArchived ? 1 : 0,
         onDestinationSelected: (index) {
@@ -220,7 +241,10 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(_error!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            Text(
+              _error!,
+              style: TextStyle(color: Theme.of(context).colorScheme.error),
+            ),
             const SizedBox(height: 16),
             FilledButton.tonal(
               onPressed: _loadBookmarks,
@@ -239,25 +263,44 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
 
     return RefreshIndicator(
       onRefresh: _loadBookmarks,
-      child: ListView.builder(
-        itemCount: _bookmarks.length + (_bookmarks.length < _totalCount ? 1 : 0),
-        itemBuilder: (context, index) {
-          if (index == _bookmarks.length) {
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              if (mounted) _loadMore();
-            });
-            return const Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: CircularProgressIndicator()),
-            );
-          }
-          return _BookmarkTile(
-            bookmark: _bookmarks[index],
-            thumbnailUrl: _thumbnailUrl(_bookmarks[index]),
-            onTap: () => _openBookmark(_bookmarks[index]),
-            onLongPress: () => _confirmArchive(_bookmarks[index]),
-          );
-        },
+      child: Column(
+        children: [
+          if (_showingCachedData)
+            Container(
+              width: double.infinity,
+              color: Theme.of(context).colorScheme.secondaryContainer,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              child: Text(
+                'Showing cached data (offline mode).',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSecondaryContainer,
+                ),
+              ),
+            ),
+          Expanded(
+            child: ListView.builder(
+              itemCount:
+                  _bookmarks.length + (_bookmarks.length < _totalCount ? 1 : 0),
+              itemBuilder: (context, index) {
+                if (index == _bookmarks.length) {
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) _loadMore();
+                  });
+                  return const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                }
+                return _BookmarkTile(
+                  bookmark: _bookmarks[index],
+                  thumbnailUrl: _thumbnailUrl(_bookmarks[index]),
+                  onTap: () => _openBookmark(_bookmarks[index]),
+                  onLongPress: () => _confirmArchive(_bookmarks[index]),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
