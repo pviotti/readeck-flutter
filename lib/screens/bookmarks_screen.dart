@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../models/bookmark.dart';
@@ -115,9 +115,9 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
       ),
     );
     if (confirmed != true) return;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('base_url');
-    await prefs.remove('token');
+    final secureStorage = FlutterSecureStorage();
+    await secureStorage.delete(key: 'base_url');
+    await secureStorage.delete(key: 'token');
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
