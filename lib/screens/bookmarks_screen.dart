@@ -243,7 +243,9 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
         itemCount: _bookmarks.length + (_bookmarks.length < _totalCount ? 1 : 0),
         itemBuilder: (context, index) {
           if (index == _bookmarks.length) {
-            _loadMore();
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _loadMore();
+            });
             return const Padding(
               padding: EdgeInsets.all(16),
               child: Center(child: CircularProgressIndicator()),
