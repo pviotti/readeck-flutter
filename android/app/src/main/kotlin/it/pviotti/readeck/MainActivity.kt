@@ -1,4 +1,4 @@
-package com.example.readeck
+package it.pviotti.readeck
 
 import io.flutter.embedding.android.FlutterActivity
 
