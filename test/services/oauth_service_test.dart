@@ -68,8 +68,8 @@ void main() {
       );
 
       final body = jsonDecode(capturedRequest.body) as Map<String, dynamic>;
-      expect(body['client_name'], 'Readeck Flutter');
-      expect(body['client_uri'], 'https://example.com/readeck-flutter');
+      expect(body['client_name'], 'Readeck Flutter app');
+      expect(body['client_uri'], 'https://github.com/pviotti/readeck-flutter');
       expect(body['software_id'], 'it.pviotti.readeck');
       expect(body['software_version'], '0.1.0');
       expect(body['redirect_uris'], [OAuthService.redirectUri]);

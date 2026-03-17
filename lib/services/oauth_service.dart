@@ -54,7 +54,7 @@ class OAuthService {
 
   Future<OAuthClientRegistration> registerClient({
     required String baseUrl,
-    String redirectUri = redirectUri,
+    String redirectUri = OAuthService.redirectUri,
   }) async {
     final response = await _client.post(
       _apiUri(baseUrl, '/oauth/client'),
@@ -92,7 +92,7 @@ class OAuthService {
     required String clientId,
     required String codeChallenge,
     required String state,
-    String redirectUri = redirectUri,
+    String redirectUri = OAuthService.redirectUri,
     String scope = requestedScope,
   }) {
     final base = Uri.parse(baseUrl);
@@ -219,9 +219,13 @@ class OAuthService {
       return const <String, dynamic>{};
     }
 
-    final decoded = jsonDecode(response.body);
-    if (decoded is Map<String, dynamic>) {
-      return decoded;
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map<String, dynamic>) {
+        return decoded;
+      }
+    } on FormatException {
+      return const <String, dynamic>{};
     }
 
     return const <String, dynamic>{};

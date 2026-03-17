@@ -103,7 +103,7 @@ static gboolean my_application_local_command_line(GApplication* application,
   g_application_activate(application);
   *exit_status = 0;
 
-  return FALSE;
+  return TRUE;
 }
 
 // Implements GApplication::startup.
@@ -151,7 +151,6 @@ MyApplication* my_application_new() {
 
   return MY_APPLICATION(g_object_new(my_application_get_type(),
                                      "application-id", APPLICATION_ID, "flags",
-                     G_APPLICATION_HANDLES_COMMAND_LINE |
-                       G_APPLICATION_HANDLES_OPEN,
+                                     G_APPLICATION_HANDLES_COMMAND_LINE,
                      nullptr));
 }
