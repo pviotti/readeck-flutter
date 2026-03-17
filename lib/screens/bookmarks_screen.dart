@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../models/auth_session.dart';
 import '../models/bookmark.dart';
 import '../repositories/bookmark_repository.dart';
 import '../services/bookmark_cache_database.dart';
 import '../services/readeck_api.dart';
-import 'login_screen.dart';
 
 class BookmarksScreen extends StatefulWidget {
-  final String baseUrl;
-  final String token;
+  final AuthSession session;
+  final Future<void> Function() onSignedOut;
+  final Future<void> Function() onSessionExpired;
 
   const BookmarksScreen({
     super.key,
-    required this.baseUrl,
-    required this.token,
+    required this.session,
+    required this.onSignedOut,
+    required this.onSessionExpired,
   });
 
   @override
@@ -39,7 +40,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
   @override
   void initState() {
     super.initState();
-    _api = ReadeckApi(baseUrl: widget.baseUrl, token: widget.token);
+    _api = ReadeckApi.fromSession(widget.session);
     _repository = BookmarkRepository(
       api: _api,
       cacheDb: BookmarkCacheDatabase(),
@@ -79,6 +80,9 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
           })
           .asFuture<void>();
     } catch (e) {
+      if (await _handleAuthError(e)) {
+        return;
+      }
       if (!mounted || currentLoad != _loadVersion) return;
       setState(() => _error = 'Failed to load bookmarks.');
     } finally {
@@ -102,7 +106,10 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
         _bookmarks.addAll(response.bookmarks);
         _totalCount = response.totalCount;
       });
-    } catch (_) {
+    } catch (error) {
+      if (await _handleAuthError(error)) {
+        return;
+      }
       // Silently fail on "load more" — user can retry by scrolling again.
     } finally {
       setState(() => _loadingMore = false);
@@ -138,13 +145,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
       ),
     );
     if (confirmed != true) return;
-    final secureStorage = FlutterSecureStorage();
-    await secureStorage.delete(key: 'base_url');
-    await secureStorage.delete(key: 'token');
-    if (!mounted) return;
-    Navigator.of(
-      context,
-    ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
+    await widget.onSignedOut();
   }
 
   Future<void> _openBookmark(Bookmark bookmark) async {
@@ -158,7 +159,17 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
     if (bookmark.thumbnailSrc == null) return '';
     final src = bookmark.thumbnailSrc!;
     if (src.startsWith('http')) return src;
-    return '${widget.baseUrl}$src';
+    return '${widget.session.baseUrl}$src';
+  }
+
+  Future<bool> _handleAuthError(Object error) async {
+    if (error is ReadeckApiException &&
+        (error.statusCode == 401 || error.statusCode == 403)) {
+      await widget.onSessionExpired();
+      return true;
+    }
+
+    return false;
   }
 
   @override
@@ -333,13 +344,17 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                     return true;
                   },
                   onDismissed: (direction) async {
+                    final messenger = ScaffoldMessenger.of(context);
                     if (direction == DismissDirection.endToStart) {
                       try {
                         await _repository.deleteBookmark(bookmark.id);
                         await _loadBookmarks();
-                      } catch (_) {
+                      } catch (error) {
+                        if (await _handleAuthError(error)) {
+                          return;
+                        }
                         if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        messenger.showSnackBar(
                           const SnackBar(
                               content: Text('Failed to delete bookmark.')),
                         );
@@ -349,9 +364,12 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                       try {
                         await _repository.archiveBookmark(bookmark.id);
                         await _loadBookmarks();
-                      } catch (_) {
+                      } catch (error) {
+                        if (await _handleAuthError(error)) {
+                          return;
+                        }
                         if (!mounted) return;
-                        ScaffoldMessenger.of(context).showSnackBar(
+                        messenger.showSnackBar(
                           const SnackBar(
                               content: Text('Failed to archive bookmark.')),
                         );
