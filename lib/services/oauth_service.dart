@@ -39,8 +39,8 @@ class OAuthService {
   static const requestedScope =
       'bookmarks:read bookmarks:write profile:read';
 
-  static const _clientName = 'Readeck Flutter';
-  static const _clientUri = 'https://example.com/readeck-flutter';
+  static const _clientName = 'Readeck Flutter app';
+  static const _clientUri = 'https://github.com/pviotti/readeck-flutter';
   static const _softwareId = 'it.pviotti.readeck';
   static const _softwareVersion = '0.1.0';
   static const _tokenEndpointAuthMethod = 'none';
