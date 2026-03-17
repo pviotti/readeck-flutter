@@ -92,6 +92,11 @@ class BookmarkCacheDatabase {
     await _trimBucket(archived: true);
   }
 
+  Future<void> deleteBookmark(String id) async {
+    final db = await _database;
+    db.execute('DELETE FROM bookmark_cache WHERE id = ?;', [id]);
+  }
+
   void dispose() {
     _db?.dispose();
     _db = null;

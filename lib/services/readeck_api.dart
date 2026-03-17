@@ -92,6 +92,16 @@ class ReadeckApi {
     }
   }
 
+  Future<void> deleteBookmark(String id) async {
+    final response = await _client.delete(
+      _uri('/bookmarks/$id'),
+      headers: _headers,
+    );
+    if (response.statusCode != 204) {
+      throw ReadeckApiException(response.statusCode, response.body);
+    }
+  }
+
   void dispose() {
     _client.close();
   }

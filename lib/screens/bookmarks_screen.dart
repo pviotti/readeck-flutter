@@ -147,36 +147,6 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
     ).pushReplacement(MaterialPageRoute(builder: (_) => const LoginScreen()));
   }
 
-  Future<void> _confirmArchive(Bookmark bookmark) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Archive bookmark'),
-        content: Text('Archive "${bookmark.title}"?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text('Archive'),
-          ),
-        ],
-      ),
-    );
-    if (confirmed != true) return;
-    try {
-      await _repository.archiveBookmark(bookmark.id);
-      await _loadBookmarks();
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to archive bookmark.')),
-      );
-    }
-  }
-
   Future<void> _openBookmark(Bookmark bookmark) async {
     final uri = Uri.tryParse(bookmark.url);
     if (uri != null && await canLaunchUrl(uri)) {
@@ -291,11 +261,109 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                     child: Center(child: CircularProgressIndicator()),
                   );
                 }
-                return _BookmarkTile(
-                  bookmark: _bookmarks[index],
-                  thumbnailUrl: _thumbnailUrl(_bookmarks[index]),
-                  onTap: () => _openBookmark(_bookmarks[index]),
-                  onLongPress: () => _confirmArchive(_bookmarks[index]),
+                final bookmark = _bookmarks[index];
+                return Dismissible(
+                  key: Key(bookmark.id),
+                  direction: _showArchived
+                      ? DismissDirection.none
+                      : DismissDirection.horizontal,
+                  background: Container(
+                    color: Theme.of(context).colorScheme.secondaryContainer,
+                    alignment: Alignment.centerLeft,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.archive,
+                          color: Theme.of(context).colorScheme.onSecondaryContainer,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Archive',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onSecondaryContainer,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  secondaryBackground: Container(
+                    color: Theme.of(context).colorScheme.errorContainer,
+                    alignment: Alignment.centerRight,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Text(
+                          'Delete',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onErrorContainer,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(
+                          Icons.delete,
+                          color: Theme.of(context).colorScheme.onErrorContainer,
+                        ),
+                      ],
+                    ),
+                  ),
+                  confirmDismiss: (direction) async {
+                    if (direction == DismissDirection.endToStart) {
+                      return showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('Delete bookmark'),
+                          content: Text('Permanently delete "${bookmark.title}"?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.of(ctx).pop(false),
+                              child: const Text('Cancel'),
+                            ),
+                            FilledButton(
+                              onPressed: () => Navigator.of(ctx).pop(true),
+                              child: const Text('Delete'),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    return true;
+                  },
+                  onDismissed: (direction) async {
+                    if (direction == DismissDirection.endToStart) {
+                      try {
+                        await _repository.deleteBookmark(bookmark.id);
+                        await _loadBookmarks();
+                      } catch (_) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text('Failed to delete bookmark.')),
+                        );
+                        await _loadBookmarks();
+                      }
+                    } else {
+                      try {
+                        await _repository.archiveBookmark(bookmark.id);
+                        await _loadBookmarks();
+                      } catch (_) {
+                        if (!mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                              content: Text('Failed to archive bookmark.')),
+                        );
+                        await _loadBookmarks();
+                      }
+                    }
+                  },
+                  child: _BookmarkTile(
+                    bookmark: bookmark,
+                    thumbnailUrl: _thumbnailUrl(bookmark),
+                    onTap: () => _openBookmark(bookmark),
+                  ),
                 );
               },
             ),
@@ -310,13 +378,11 @@ class _BookmarkTile extends StatelessWidget {
   final Bookmark bookmark;
   final String thumbnailUrl;
   final VoidCallback onTap;
-  final VoidCallback onLongPress;
 
   const _BookmarkTile({
     required this.bookmark,
     required this.thumbnailUrl,
     required this.onTap,
-    required this.onLongPress,
   });
 
   @override
@@ -325,7 +391,6 @@ class _BookmarkTile extends StatelessWidget {
 
     return InkWell(
       onTap: onTap,
-      onLongPress: onLongPress,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         child: Row(
