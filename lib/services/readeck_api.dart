@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../models/bookmark.dart';
+import '../models/auth_session.dart';
 
 class BookmarksResponse {
   final List<Bookmark> bookmarks;
@@ -23,14 +24,26 @@ class ReadeckApiException implements Exception {
 
 class ReadeckApi {
   final String baseUrl;
-  final String token;
+  final String accessToken;
   final http.Client _client;
 
-  ReadeckApi({required this.baseUrl, required this.token, http.Client? client})
+  ReadeckApi({
+    required this.baseUrl,
+    required this.accessToken,
+    http.Client? client,
+  })
       : _client = client ?? http.Client();
 
+  factory ReadeckApi.fromSession(AuthSession session, {http.Client? client}) {
+    return ReadeckApi(
+      baseUrl: session.baseUrl,
+      accessToken: session.accessToken,
+      client: client,
+    );
+  }
+
   Map<String, String> get _headers => {
-        'Authorization': 'Bearer $token',
+        'Authorization': 'Bearer $accessToken',
         'Accept': 'application/json',
       };
 

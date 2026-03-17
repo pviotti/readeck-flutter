@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Readeck
+Comment=Read-it-later client for Readeck
+Type=Application
+Categories=Network;Utility;
+Exec=@BINARY_NAME@ %u
+Terminal=false
+StartupNotify=true
+MimeType=x-scheme-handler/readeck;
