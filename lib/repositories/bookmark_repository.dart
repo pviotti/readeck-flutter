@@ -79,6 +79,11 @@ class BookmarkRepository {
     await _cacheDb.archiveBookmark(id);
   }
 
+  Future<void> deleteBookmark(String id) async {
+    await _api.deleteBookmark(id);
+    await _cacheDb.deleteBookmark(id);
+  }
+
   void dispose() {
     _cacheDb.dispose();
   }
