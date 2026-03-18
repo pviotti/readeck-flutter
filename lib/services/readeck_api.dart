@@ -12,6 +12,12 @@ class BookmarksResponse {
   const BookmarksResponse({required this.bookmarks, required this.totalCount});
 }
 
+class BookmarkCreateResponse {
+  final String? bookmarkId;
+
+  const BookmarkCreateResponse({required this.bookmarkId});
+}
+
 class ReadeckApiException implements Exception {
   final int statusCode;
   final String message;
@@ -31,8 +37,7 @@ class ReadeckApi {
     required this.baseUrl,
     required this.accessToken,
     http.Client? client,
-  })
-      : _client = client ?? http.Client();
+  }) : _client = client ?? http.Client();
 
   factory ReadeckApi.fromSession(AuthSession session, {http.Client? client}) {
     return ReadeckApi(
@@ -43,9 +48,9 @@ class ReadeckApi {
   }
 
   Map<String, String> get _headers => {
-        'Authorization': 'Bearer $accessToken',
-        'Accept': 'application/json',
-      };
+    'Authorization': 'Bearer $accessToken',
+    'Accept': 'application/json',
+  };
 
   Uri _uri(String path, [Map<String, dynamic>? queryParameters]) {
     final base = Uri.parse(baseUrl);
@@ -84,14 +89,40 @@ class ReadeckApi {
       throw ReadeckApiException(response.statusCode, response.body);
     }
 
-    final totalCount =
-        int.tryParse(response.headers['total-count'] ?? '') ?? 0;
+    final totalCount = int.tryParse(response.headers['total-count'] ?? '') ?? 0;
     final List<dynamic> body = jsonDecode(response.body) as List<dynamic>;
     final bookmarks = body
         .map((item) => Bookmark.fromJson(item as Map<String, dynamic>))
         .toList();
 
     return BookmarksResponse(bookmarks: bookmarks, totalCount: totalCount);
+  }
+
+  Future<BookmarkCreateResponse> createBookmark({
+    required String url,
+    String? title,
+    List<String>? labels,
+  }) async {
+    final body = <String, dynamic>{'url': url};
+    final normalizedTitle = title?.trim();
+    if (normalizedTitle != null && normalizedTitle.isNotEmpty) {
+      body['title'] = normalizedTitle;
+    }
+    if (labels != null && labels.isNotEmpty) {
+      body['labels'] = labels;
+    }
+
+    final response = await _client.post(
+      _uri('/bookmarks'),
+      headers: {..._headers, 'Content-Type': 'application/json'},
+      body: jsonEncode(body),
+    );
+
+    if (response.statusCode != 202) {
+      throw ReadeckApiException(response.statusCode, response.body);
+    }
+
+    return BookmarkCreateResponse(bookmarkId: response.headers['bookmark-id']);
   }
 
   Future<void> archiveBookmark(String id) async {

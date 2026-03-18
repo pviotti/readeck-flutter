@@ -74,6 +74,14 @@ class BookmarkRepository {
     return _api.getBookmarks(limit: limit, offset: offset, archived: archived);
   }
 
+  Future<BookmarkCreateResponse> createBookmark({
+    required String url,
+    String? title,
+    List<String>? labels,
+  }) {
+    return _api.createBookmark(url: url, title: title, labels: labels);
+  }
+
   Future<void> archiveBookmark(String id) async {
     await _api.archiveBookmark(id);
     await _cacheDb.archiveBookmark(id);
