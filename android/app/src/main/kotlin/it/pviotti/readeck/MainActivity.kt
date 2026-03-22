@@ -58,10 +58,18 @@ class MainActivity : FlutterActivity() {
         ).setMethodCallHandler { call, result ->
             when (call.method) {
                 "saveCredentials" -> {
-                    val baseUrl = call.argument<String>("baseUrl") ?: ""
-                    val accessToken = call.argument<String>("accessToken") ?: ""
-                    saveCredentials(baseUrl, accessToken)
-                    result.success(null)
+                    val baseUrl = call.argument<String>("baseUrl").orEmpty().trim()
+                    val accessToken = call.argument<String>("accessToken").orEmpty().trim()
+                    if (baseUrl.isEmpty() || accessToken.isEmpty()) {
+                        result.error(
+                            "INVALID_ARGUMENTS",
+                            "baseUrl and accessToken must be non-empty",
+                            null,
+                        )
+                    } else {
+                        saveCredentials(baseUrl, accessToken)
+                        result.success(null)
+                    }
                 }
 
                 "clearCredentials" -> {
