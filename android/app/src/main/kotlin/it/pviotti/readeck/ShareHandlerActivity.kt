@@ -32,7 +32,7 @@ class ShareHandlerActivity : Activity() {
 
         val subject = intent.getStringExtra(Intent.EXTRA_SUBJECT)?.trim()
 
-        Log.d(TAG, "Share intent received: url=$url, subject=$subject")
+        if (BuildConfig.DEBUG) Log.d(TAG, "Share intent received: url=$url, subject=$subject")
 
         val credentials = readShareCredentials(this)
         if (credentials == null) {
@@ -43,12 +43,12 @@ class ShareHandlerActivity : Activity() {
         }
 
         val (baseUrl, accessToken) = credentials
-        Log.d(TAG, "Credentials found: baseUrl=$baseUrl")
+        if (BuildConfig.DEBUG) Log.d(TAG, "Credentials found: baseUrl=$baseUrl")
 
         Thread {
             val success =
                 try {
-                    Log.d(TAG, "Posting bookmark to $baseUrl/api/bookmarks")
+                    if (BuildConfig.DEBUG) Log.d(TAG, "Posting bookmark to $baseUrl/api/bookmarks")
                     postBookmark(baseUrl, accessToken, url, subject)
                     true
                 } catch (e: Exception) {
