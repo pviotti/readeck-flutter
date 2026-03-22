@@ -2,6 +2,8 @@ package it.pviotti.readeck
 
 import android.content.Context
 import android.util.Log
+import androidx.security.crypto.EncryptedFile
+import androidx.security.crypto.MasterKey
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
@@ -12,6 +14,19 @@ internal const val CREDENTIALS_FILE = "readeck_share_creds"
 private const val PREFS_CHANNEL = "it.pviotti.readeck/prefs"
 private const val TAG = "ReadeckCredentials"
 
+private fun buildMasterKey(context: Context): MasterKey =
+    MasterKey.Builder(context)
+        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+        .build()
+
+private fun buildEncryptedFile(context: Context, file: File): EncryptedFile =
+    EncryptedFile.Builder(
+        context,
+        file,
+        buildMasterKey(context),
+        EncryptedFile.FileEncryptionScheme.AES256_GCM_HKDF_4KB,
+    ).build()
+
 internal fun readShareCredentials(context: Context): Pair<String, String>? {
     return try {
         val credsFile = File(context.filesDir, CREDENTIALS_FILE)
@@ -19,10 +34,13 @@ internal fun readShareCredentials(context: Context): Pair<String, String>? {
             Log.d(TAG, "No credentials file found")
             return null
         }
-        val json = JSONObject(credsFile.readText())
+        val content = buildEncryptedFile(context, credsFile)
+            .openFileInput()
+            .use { it.readBytes().toString(Charsets.UTF_8) }
+        val json = JSONObject(content)
         val baseUrl = json.optString("baseUrl").takeIf { it.isNotEmpty() } ?: return null
         val accessToken = json.optString("accessToken").takeIf { it.isNotEmpty() } ?: return null
-        Log.d(TAG, "Credentials read from private file")
+        Log.d(TAG, "Credentials read from encrypted file")
         Pair(baseUrl, accessToken)
     } catch (e: Exception) {
         Log.e(TAG, "Failed to read credentials", e)
@@ -59,16 +77,16 @@ class MainActivity : FlutterActivity() {
     private fun saveCredentials(baseUrl: String, accessToken: String) {
         try {
             val credsFile = File(filesDir, CREDENTIALS_FILE)
+            // EncryptedFile cannot overwrite an existing file; delete first.
+            if (credsFile.exists()) credsFile.delete()
             val json = JSONObject().apply {
                 put("baseUrl", baseUrl)
                 put("accessToken", accessToken)
             }
-            credsFile.writeText(json.toString())
-            credsFile.setReadable(false, false)
-            credsFile.setWritable(false, false)
-            credsFile.setReadable(true, true)
-            credsFile.setWritable(true, true)
-            Log.d(TAG, "Credentials saved to private file")
+            buildEncryptedFile(this, credsFile)
+                .openFileOutput()
+                .use { it.write(json.toString().toByteArray(Charsets.UTF_8)) }
+            Log.d(TAG, "Credentials saved to encrypted file")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to save credentials", e)
         }
