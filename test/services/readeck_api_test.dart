@@ -135,8 +135,8 @@ void main() {
         client: client,
       );
 
-      expect(
-        () => api.createBookmark(url: 'https://example.com/articles/1'),
+      await expectLater(
+        api.createBookmark(url: 'https://example.com/articles/1'),
         throwsA(
           isA<ReadeckApiException>().having(
             (error) => error.statusCode,
@@ -156,8 +156,8 @@ void main() {
         client: client,
       );
 
-      expect(
-        () => api.createBookmark(url: 'https://example.com/articles/1'),
+      await expectLater(
+        api.createBookmark(url: 'https://example.com/articles/1'),
         throwsA(isA<ReadeckApiException>()),
       );
     });
