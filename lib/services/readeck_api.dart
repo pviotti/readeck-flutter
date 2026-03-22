@@ -124,7 +124,7 @@ class ReadeckApi {
 
     final bookmarkId = response.headers['bookmark-id'];
     if (bookmarkId == null || bookmarkId.isEmpty) {
-      throw ReadeckApiException(202, 'Server response is missing the Bookmark-Id header.');
+      throw ReadeckApiException(202, 'Server response is missing the bookmark-id header.');
     }
 
     return BookmarkCreateResponse(bookmarkId: bookmarkId);
