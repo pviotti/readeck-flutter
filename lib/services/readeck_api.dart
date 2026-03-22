@@ -13,7 +13,7 @@ class BookmarksResponse {
 }
 
 class BookmarkCreateResponse {
-  final String? bookmarkId;
+  final String bookmarkId;
 
   const BookmarkCreateResponse({required this.bookmarkId});
 }
@@ -122,7 +122,12 @@ class ReadeckApi {
       throw ReadeckApiException(response.statusCode, response.body);
     }
 
-    return BookmarkCreateResponse(bookmarkId: response.headers['bookmark-id']);
+    final bookmarkId = response.headers['bookmark-id'];
+    if (bookmarkId == null || bookmarkId.isEmpty) {
+      throw ReadeckApiException(202, 'Server response is missing the Bookmark-Id header.');
+    }
+
+    return BookmarkCreateResponse(bookmarkId: bookmarkId);
   }
 
   Future<void> archiveBookmark(String id) async {
