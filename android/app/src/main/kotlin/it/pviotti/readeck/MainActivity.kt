@@ -77,8 +77,12 @@ class MainActivity : FlutterActivity() {
                 }
 
                 "clearCredentials" -> {
-                    clearCredentials()
-                    result.success(null)
+                    try {
+                        clearCredentials()
+                        result.success(null)
+                    } catch (e: Exception) {
+                        result.error("CLEAR_FAILED", "Failed to clear credentials", e.message)
+                    }
                 }
 
                 else -> result.notImplemented()
@@ -101,14 +105,10 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun clearCredentials() {
-        try {
-            val credsFile = File(filesDir, CREDENTIALS_FILE)
-            if (credsFile.exists()) {
-                credsFile.delete()
-                Log.d(TAG, "Credentials cleared")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to clear credentials", e)
+        val credsFile = File(filesDir, CREDENTIALS_FILE)
+        if (credsFile.exists()) {
+            credsFile.delete()
+            Log.d(TAG, "Credentials cleared")
         }
     }
 }
