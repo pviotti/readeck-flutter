@@ -67,8 +67,12 @@ class MainActivity : FlutterActivity() {
                             null,
                         )
                     } else {
-                        saveCredentials(baseUrl, accessToken)
-                        result.success(null)
+                        try {
+                            saveCredentials(baseUrl, accessToken)
+                            result.success(null)
+                        } catch (e: Exception) {
+                            result.error("SAVE_FAILED", "Failed to save credentials", e.message)
+                        }
                     }
                 }
 
@@ -83,21 +87,17 @@ class MainActivity : FlutterActivity() {
     }
 
     private fun saveCredentials(baseUrl: String, accessToken: String) {
-        try {
-            val credsFile = File(filesDir, CREDENTIALS_FILE)
-            // EncryptedFile cannot overwrite an existing file; delete first.
-            if (credsFile.exists()) credsFile.delete()
-            val json = JSONObject().apply {
-                put("baseUrl", baseUrl)
-                put("accessToken", accessToken)
-            }
-            buildEncryptedFile(this, credsFile)
-                .openFileOutput()
-                .use { it.write(json.toString().toByteArray(Charsets.UTF_8)) }
-            Log.d(TAG, "Credentials saved to encrypted file")
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed to save credentials", e)
+        val credsFile = File(filesDir, CREDENTIALS_FILE)
+        // EncryptedFile cannot overwrite an existing file; delete first.
+        if (credsFile.exists()) credsFile.delete()
+        val json = JSONObject().apply {
+            put("baseUrl", baseUrl)
+            put("accessToken", accessToken)
         }
+        buildEncryptedFile(this, credsFile)
+            .openFileOutput()
+            .use { it.write(json.toString().toByteArray(Charsets.UTF_8)) }
+        Log.d(TAG, "Credentials saved to encrypted file")
     }
 
     private fun clearCredentials() {
