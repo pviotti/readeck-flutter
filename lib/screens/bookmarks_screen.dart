@@ -286,13 +286,17 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                       children: [
                         Icon(
                           Icons.archive,
-                          color: Theme.of(context).colorScheme.onSecondaryContainer,
+                          color: Theme.of(
+                            context,
+                          ).colorScheme.onSecondaryContainer,
                         ),
                         const SizedBox(width: 8),
                         Text(
                           'Archive',
                           style: TextStyle(
-                            color: Theme.of(context).colorScheme.onSecondaryContainer,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSecondaryContainer,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -309,7 +313,9 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                         Text(
                           'Delete',
                           style: TextStyle(
-                            color: Theme.of(context).colorScheme.onErrorContainer,
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onErrorContainer,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -327,7 +333,9 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                         context: context,
                         builder: (ctx) => AlertDialog(
                           title: const Text('Delete bookmark'),
-                          content: Text('Permanently delete "${bookmark.title}"?'),
+                          content: Text(
+                            'Permanently delete "${bookmark.title}"?',
+                          ),
                           actions: [
                             TextButton(
                               onPressed: () => Navigator.of(ctx).pop(false),
@@ -356,7 +364,8 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                         if (!mounted) return;
                         messenger.showSnackBar(
                           const SnackBar(
-                              content: Text('Failed to delete bookmark.')),
+                            content: Text('Failed to delete bookmark.'),
+                          ),
                         );
                         await _loadBookmarks();
                       }
@@ -371,7 +380,8 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                         if (!mounted) return;
                         messenger.showSnackBar(
                           const SnackBar(
-                              content: Text('Failed to archive bookmark.')),
+                            content: Text('Failed to archive bookmark.'),
+                          ),
                         );
                         await _loadBookmarks();
                       }

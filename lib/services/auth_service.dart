@@ -1,4 +1,5 @@
 import '../models/auth_session.dart';
+import 'app_preferences.dart';
 import 'auth_storage.dart';
 import 'oauth_service.dart';
 import 'readeck_api.dart';
@@ -20,8 +21,15 @@ class AuthService {
       : _storage = storage ?? const AuthStorage(),
         _oauthService = oauthService ?? OAuthService();
 
-  Future<AuthSession?> restoreSession() {
-    return _storage.readSession();
+  Future<AuthSession?> restoreSession() async {
+    final session = await _storage.readSession();
+    if (session != null) {
+      await AppPreferences.saveCredentials(
+        baseUrl: session.baseUrl,
+        accessToken: session.accessToken,
+      );
+    }
+    return session;
   }
 
   Future<PendingOAuthFlow> startAuthorization(String rawBaseUrl) async {
@@ -112,6 +120,10 @@ class AuthService {
       }
 
       await _storage.writeSession(session);
+      await AppPreferences.saveCredentials(
+        baseUrl: session.baseUrl,
+        accessToken: session.accessToken,
+      );
       await _storage.clearPendingFlow();
       return session;
     } on OAuthServiceException catch (error) {
@@ -142,6 +154,7 @@ class AuthService {
   Future<void> clearSession() async {
     await _storage.clearSession();
     await _storage.clearPendingFlow();
+    await AppPreferences.clearCredentials();
   }
 
   Future<void> cancelPendingAuthorization() {
