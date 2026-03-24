@@ -19,6 +19,10 @@ android {
         jvmTarget = JavaVersion.VERSION_17.toString()
     }
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         applicationId = "it.pviotti.readeck"
         // You can update the following values to match your application needs.

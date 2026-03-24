@@ -75,6 +75,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
                 ..addAll(value.bookmarks);
               _totalCount = value.totalCount;
               _showingCachedData = value.fromCache;
+              _loading = false;
               _error = null;
             });
           })
