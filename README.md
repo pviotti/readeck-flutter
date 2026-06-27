@@ -13,6 +13,11 @@ Install dependencies:
 flutter pub get
 ```
 
+Run tests:
+```bash
+flutter test
+```
+
 If you need to confirm the available devices first:
 ```bash
 flutter devices
@@ -32,6 +37,11 @@ flutter run -d android
 # Or: build the APK and then run
 flutter build apk --debug
 adb install -r build/app/outputs/flutter-apk/app-debug.apk
+```
+
+Run a local version of Readeck:
+```bash
+docker run --rm -p 8000:8000 -v readeck-data:/readeck codeberg.org/readeck/readeck:latest
 ```
 
  [flutter]: https://flutter.dev/
