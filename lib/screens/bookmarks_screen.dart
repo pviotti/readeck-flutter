@@ -6,6 +6,7 @@ import '../models/auth_session.dart';
 import '../models/bookmark.dart';
 import '../repositories/bookmark_repository.dart';
 import '../screens/article_screen.dart';
+import '../screens/settings_screen.dart';
 import '../services/article_cache_database.dart';
 import '../services/bookmark_cache_database.dart';
 import '../services/readeck_api.dart';
@@ -165,6 +166,12 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
     );
   }
 
+  Future<void> _openSettings() async {
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(builder: (_) => const SettingsScreen()),
+    );
+  }
+
   String _thumbnailUrl(Bookmark bookmark) {
     if (bookmark.thumbnailSrc == null) return '';
     final src = bookmark.thumbnailSrc!;
@@ -211,6 +218,14 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
             label: Text('Read'),
           ),
           const Divider(indent: 16, endIndent: 16),
+          ListTile(
+            leading: Icon(Icons.settings_outlined),
+            title: Text('Settings'),
+            onTap: () {
+              Navigator.of(context).pop();
+              _openSettings();
+            },
+          ),
           ListTile(
             leading: Icon(Icons.logout),
             title: Text('Sign out'),

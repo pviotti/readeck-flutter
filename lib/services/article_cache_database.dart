@@ -72,6 +72,32 @@ class ArticleCacheDatabase {
     db.execute('DELETE FROM article_cache WHERE id = ?;', [id]);
   }
 
+  Future<void> clearAllArticles() async {
+    final db = await _database;
+    db.execute('DELETE FROM article_cache;');
+  }
+
+  Future<int> getCachedHtmlBytes() async {
+    final db = await _database;
+    final rs = db.select(
+      '''
+      SELECT COALESCE(SUM(LENGTH(CAST(html AS BLOB))), 0) AS total_bytes
+      FROM article_cache
+      ''',
+    );
+
+    if (rs.isEmpty) {
+      return 0;
+    }
+
+    final value = rs.first['total_bytes'];
+    if (value is int) {
+      return value;
+    }
+
+    return 0;
+  }
+
   void dispose() {
     _db?.dispose();
     _db = null;
