@@ -162,4 +162,74 @@ void main() {
       );
     });
   });
+
+  group('ReadeckApi.getBookmarkArticle', () {
+    test('returns article HTML on success', () async {
+      late http.Request capturedRequest;
+      const html = '<p>Hello <strong>world</strong></p>';
+      final client = MockClient((request) async {
+        capturedRequest = request;
+        return http.Response(html, 200);
+      });
+
+      final api = ReadeckApi(
+        baseUrl: 'https://readeck.example.com',
+        accessToken: 'token-abc',
+        client: client,
+      );
+
+      final result = await api.getBookmarkArticle('bm-42');
+
+      expect(result, html);
+      expect(capturedRequest.method, 'GET');
+      expect(
+        capturedRequest.url.toString(),
+        'https://readeck.example.com/api/bookmarks/bm-42/article',
+      );
+      expect(capturedRequest.headers['Authorization'], 'Bearer token-abc');
+      expect(capturedRequest.headers['Accept'], 'text/html');
+    });
+
+    test('throws ReadeckApiException on 404', () async {
+      final client = MockClient((_) async => http.Response('not found', 404));
+
+      final api = ReadeckApi(
+        baseUrl: 'https://readeck.example.com',
+        accessToken: 'token-abc',
+        client: client,
+      );
+
+      await expectLater(
+        api.getBookmarkArticle('bm-99'),
+        throwsA(
+          isA<ReadeckApiException>().having(
+            (e) => e.statusCode,
+            'statusCode',
+            404,
+          ),
+        ),
+      );
+    });
+
+    test('throws ReadeckApiException on non-200 status', () async {
+      final client = MockClient((_) async => http.Response('server error', 500));
+
+      final api = ReadeckApi(
+        baseUrl: 'https://readeck.example.com',
+        accessToken: 'token-abc',
+        client: client,
+      );
+
+      await expectLater(
+        api.getBookmarkArticle('bm-1'),
+        throwsA(
+          isA<ReadeckApiException>().having(
+            (e) => e.statusCode,
+            'statusCode',
+            500,
+          ),
+        ),
+      );
+    });
+  });
 }
