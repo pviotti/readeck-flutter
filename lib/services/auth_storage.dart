@@ -16,6 +16,8 @@ class AuthStorage {
   static const _pendingStateKey = 'pending_state';
   static const _pendingScopeKey = 'pending_scope';
   static const _pendingCreatedAtKey = 'pending_created_at';
+  static const _azureOpenAiEndpointKey = 'azure_openai_endpoint';
+  static const _azureOpenAiKeyKey = 'azure_openai_key';
 
   final FlutterSecureStorage _secureStorage;
 
@@ -119,5 +121,26 @@ class AuthStorage {
     await _secureStorage.delete(key: _pendingStateKey);
     await _secureStorage.delete(key: _pendingScopeKey);
     await _secureStorage.delete(key: _pendingCreatedAtKey);
+  }
+
+  Future<String?> readAzureOpenAiEndpoint() async {
+    return _secureStorage.read(key: _azureOpenAiEndpointKey);
+  }
+
+  Future<String?> readAzureOpenAiKey() async {
+    return _secureStorage.read(key: _azureOpenAiKeyKey);
+  }
+
+  Future<void> writeAzureOpenAiSettings({
+    required String endpoint,
+    required String apiKey,
+  }) async {
+    await _secureStorage.write(key: _azureOpenAiEndpointKey, value: endpoint);
+    await _secureStorage.write(key: _azureOpenAiKeyKey, value: apiKey);
+  }
+
+  Future<void> clearAzureOpenAiSettings() async {
+    await _secureStorage.delete(key: _azureOpenAiEndpointKey);
+    await _secureStorage.delete(key: _azureOpenAiKeyKey);
   }
 }

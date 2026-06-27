@@ -11,6 +11,7 @@ import 'package:readeck/services/readeck_api.dart';
 
 class InMemoryArticleCacheDatabase extends ArticleCacheDatabase {
   final Map<String, String> _cache = <String, String>{};
+  final Map<String, String> _summaries = <String, String>{};
 
   @override
   Future<String?> fetchArticleHtml(String id) async => _cache[id];
@@ -23,6 +24,15 @@ class InMemoryArticleCacheDatabase extends ArticleCacheDatabase {
   @override
   Future<void> deleteArticle(String id) async {
     _cache.remove(id);
+    _summaries.remove(id);
+  }
+
+  @override
+  Future<String?> fetchArticleSummary(String id) async => _summaries[id];
+
+  @override
+  Future<void> upsertArticleSummary(String id, String summary) async {
+    _summaries[id] = summary;
   }
 
   @override

@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 
 import '../services/article_cache_database.dart';
+import '../services/auth_storage.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -13,22 +14,91 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late final ArticleCacheDatabase _articleCacheDb;
+  late final AuthStorage _authStorage;
+  final _endpointController = TextEditingController();
+  final _apiKeyController = TextEditingController();
   bool _loading = true;
   bool _clearing = false;
+  bool _savingAiSettings = false;
   String? _error;
+  String? _aiSettingsError;
   int _cacheBytes = 0;
 
   @override
   void initState() {
     super.initState();
     _articleCacheDb = ArticleCacheDatabase();
+    _authStorage = const AuthStorage();
     _loadCacheSize();
+    _loadAiSettings();
   }
 
   @override
   void dispose() {
+    _endpointController.dispose();
+    _apiKeyController.dispose();
     _articleCacheDb.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadAiSettings() async {
+    try {
+      final endpoint = await _authStorage.readAzureOpenAiEndpoint() ?? '';
+      final apiKey = await _authStorage.readAzureOpenAiKey() ?? '';
+      if (!mounted) return;
+      _endpointController.text = endpoint;
+      _apiKeyController.text = apiKey;
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _aiSettingsError = 'Failed to load Azure OpenAI settings.');
+    }
+  }
+
+  Future<void> _saveAiSettings() async {
+    final endpoint = _endpointController.text.trim();
+    final apiKey = _apiKeyController.text.trim();
+
+    setState(() {
+      _savingAiSettings = true;
+      _aiSettingsError = null;
+    });
+
+    try {
+      if (endpoint.isEmpty && apiKey.isEmpty) {
+        await _authStorage.clearAzureOpenAiSettings();
+      } else {
+        final parsedUri = Uri.tryParse(endpoint);
+        if (parsedUri == null || !parsedUri.isAbsolute) {
+          throw const FormatException('Invalid endpoint URL');
+        }
+        if (apiKey.isEmpty) {
+          throw const FormatException('Missing API key');
+        }
+        await _authStorage.writeAzureOpenAiSettings(
+          endpoint: endpoint,
+          apiKey: apiKey,
+        );
+      }
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Azure OpenAI settings saved.')),
+      );
+    } on FormatException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _aiSettingsError = e.message == 'Missing API key'
+            ? 'Please provide an API key or clear both fields.'
+            : 'Please enter a valid endpoint URL.';
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _aiSettingsError = 'Failed to save Azure OpenAI settings.');
+    } finally {
+      if (mounted) {
+        setState(() => _savingAiSettings = false);
+      }
+    }
   }
 
   Future<void> _loadCacheSize() async {
@@ -123,6 +193,63 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Azure OpenAI settings for article summarization',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _endpointController,
+                      keyboardType: TextInputType.url,
+                      textInputAction: TextInputAction.next,
+                      decoration: const InputDecoration(
+                        labelText: 'Endpoint URL',
+                        hintText: 'https://<resource>.openai.azure.com/...',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _apiKeyController,
+                      obscureText: true,
+                      decoration: const InputDecoration(
+                        labelText: 'API key',
+                      ),
+                    ),
+                    if (_aiSettingsError != null) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        _aiSettingsError!,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 12),
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: FilledButton.icon(
+                        onPressed: _savingAiSettings ? null : _saveAiSettings,
+                        icon: _savingAiSettings
+                            ? const SizedBox(
+                                width: 16,
+                                height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.save_outlined),
+                        label: Text(_savingAiSettings ? 'Saving...' : 'Save AI settings'),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             Card(
               child: ListTile(
                 leading: const Icon(Icons.offline_bolt_outlined),
