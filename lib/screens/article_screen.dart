@@ -6,6 +6,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../models/auth_session.dart';
 import '../models/bookmark.dart';
+import '../repositories/article_repository.dart';
+import '../services/article_cache_database.dart';
 import '../services/readeck_api.dart';
 
 class ArticleScreen extends StatefulWidget {
@@ -25,14 +27,28 @@ class ArticleScreen extends StatefulWidget {
 }
 
 class _ArticleScreenState extends State<ArticleScreen> {
+  late final ArticleCacheDatabase _articleCacheDb;
+  late final ArticleRepository _articleRepository;
   String? _html;
   bool _loading = true;
+  bool _fromCache = false;
   String? _error;
 
   @override
   void initState() {
     super.initState();
+    _articleCacheDb = ArticleCacheDatabase();
+    _articleRepository = ArticleRepository(
+      api: widget.api,
+      cacheDb: _articleCacheDb,
+    );
     _fetchArticle();
+  }
+
+  @override
+  void dispose() {
+    _articleCacheDb.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchArticle() async {
@@ -41,15 +57,17 @@ class _ArticleScreenState extends State<ArticleScreen> {
       _error = null;
     });
     try {
-      final html = await widget.api.getBookmarkArticle(widget.bookmark.id);
+      final result = await _articleRepository.loadArticle(widget.bookmark.id);
       if (!mounted) return;
       setState(() {
-        _html = html;
+        _html = result.html;
+        _fromCache = result.fromCache;
         _loading = false;
       });
     } on ReadeckApiException catch (e) {
       if (!mounted) return;
       setState(() {
+        _fromCache = false;
         _error = e.statusCode == 404
             ? 'No article content available for this bookmark.'
             : 'Failed to load article (${e.statusCode}).';
@@ -58,6 +76,7 @@ class _ArticleScreenState extends State<ArticleScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
+        _fromCache = false;
         _error = 'Failed to load article.';
         _loading = false;
       });
@@ -119,19 +138,30 @@ class _ArticleScreenState extends State<ArticleScreen> {
       );
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: HtmlWidget(
-        _html!,
-        baseUrl: Uri.parse(widget.session.baseUrl),
-        onTapUrl: (url) async {
-          final uri = Uri.tryParse(url);
-          if (uri != null && await canLaunchUrl(uri)) {
-            await launchUrl(uri, mode: LaunchMode.externalApplication);
-          }
-          return true;
-        },
-      ),
+    return Column(
+      children: [
+        if (_fromCache)
+          MaterialBanner(
+            content: const Text('Showing offline copy of this article.'),
+            actions: const [SizedBox.shrink()],
+          ),
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: HtmlWidget(
+              _html!,
+              baseUrl: Uri.parse(widget.session.baseUrl),
+              onTapUrl: (url) async {
+                final uri = Uri.tryParse(url);
+                if (uri != null && await canLaunchUrl(uri)) {
+                  await launchUrl(uri, mode: LaunchMode.externalApplication);
+                }
+                return true;
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

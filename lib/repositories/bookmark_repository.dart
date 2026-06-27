@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import '../models/bookmark.dart';
+import '../services/article_cache_database.dart';
 import '../services/bookmark_cache_database.dart';
 import '../services/readeck_api.dart';
 
@@ -19,12 +20,15 @@ class BookmarkStreamValue {
 class BookmarkRepository {
   final ReadeckApi _api;
   final BookmarkCacheDatabase _cacheDb;
+  final ArticleCacheDatabase _articleCacheDb;
 
   BookmarkRepository({
     required ReadeckApi api,
     required BookmarkCacheDatabase cacheDb,
+    required ArticleCacheDatabase articleCacheDb,
   }) : _api = api,
-       _cacheDb = cacheDb;
+       _cacheDb = cacheDb,
+       _articleCacheDb = articleCacheDb;
 
   Stream<BookmarkStreamValue> streamFirstPage({
     required bool archived,
@@ -92,9 +96,15 @@ class BookmarkRepository {
   Future<void> deleteBookmark(String id) async {
     await _api.deleteBookmark(id);
     await _cacheDb.deleteBookmark(id);
+    try {
+      await _articleCacheDb.deleteArticle(id);
+    } catch (_) {
+      // Best-effort: article cache eviction must not block bookmark deletion.
+    }
   }
 
   void dispose() {
     _cacheDb.dispose();
+    _articleCacheDb.dispose();
   }
 }
