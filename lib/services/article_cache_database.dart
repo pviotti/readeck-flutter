@@ -23,6 +23,7 @@ class ArticleCacheDatabase {
       CREATE TABLE IF NOT EXISTS article_cache (
         id TEXT PRIMARY KEY,
         html TEXT NOT NULL,
+        summary TEXT,
         cached_at TEXT NOT NULL
       );
     ''');
@@ -64,6 +65,40 @@ class ArticleCacheDatabase {
       ;
       ''',
       [id, html, DateTime.now().toUtc().toIso8601String()],
+    );
+  }
+
+  Future<String?> fetchArticleSummary(String id) async {
+    final db = await _database;
+    final rs = db.select(
+      '''
+      SELECT summary
+      FROM article_cache
+      WHERE id = ?
+      LIMIT 1
+      ''',
+      [id],
+    );
+
+    if (rs.isEmpty) {
+      return null;
+    }
+
+    return rs.first['summary'] as String?;
+  }
+
+  Future<void> upsertArticleSummary(String id, String summary) async {
+    final db = await _database;
+    db.execute(
+      '''
+      INSERT INTO article_cache (id, html, summary, cached_at)
+      VALUES (?, COALESCE((SELECT html FROM article_cache WHERE id = ?), ''), ?, ?)
+      ON CONFLICT(id) DO UPDATE SET
+        summary = excluded.summary,
+        cached_at = excluded.cached_at
+      ;
+      ''',
+      [id, id, summary, DateTime.now().toUtc().toIso8601String()],
     );
   }
 
