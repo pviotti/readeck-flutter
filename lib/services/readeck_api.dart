@@ -153,6 +153,17 @@ class ReadeckApi {
     }
   }
 
+  Future<String> getBookmarkArticle(String id) async {
+    final response = await _client.get(
+      _uri('/bookmarks/$id/article'),
+      headers: {..._headers, 'Accept': 'text/html'},
+    );
+    if (response.statusCode != 200) {
+      throw ReadeckApiException(response.statusCode, response.body);
+    }
+    return response.body;
+  }
+
   void dispose() {
     _client.close();
   }

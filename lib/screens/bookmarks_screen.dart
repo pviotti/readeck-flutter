@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import '../models/auth_session.dart';
 import '../models/bookmark.dart';
 import '../repositories/bookmark_repository.dart';
+import '../screens/article_screen.dart';
 import '../services/bookmark_cache_database.dart';
 import '../services/readeck_api.dart';
 
@@ -151,10 +152,15 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
   }
 
   Future<void> _openBookmark(Bookmark bookmark) async {
-    final uri = Uri.tryParse(bookmark.url);
-    if (uri != null && await canLaunchUrl(uri)) {
-      await launchUrl(uri, mode: LaunchMode.externalApplication);
-    }
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => ArticleScreen(
+          session: widget.session,
+          bookmark: bookmark,
+          api: _api,
+        ),
+      ),
+    );
   }
 
   String _thumbnailUrl(Bookmark bookmark) {
