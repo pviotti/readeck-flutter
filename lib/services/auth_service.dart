@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 import '../models/auth_session.dart';
 import 'app_preferences.dart';
 import 'auth_storage.dart';

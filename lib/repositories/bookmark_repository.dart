@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+
 import '../models/bookmark.dart';
 import '../services/bookmark_cache_database.dart';
 import '../services/readeck_api.dart';
