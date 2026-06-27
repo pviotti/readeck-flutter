@@ -6,6 +6,7 @@ import '../models/auth_session.dart';
 import '../models/bookmark.dart';
 import '../repositories/bookmark_repository.dart';
 import '../screens/article_screen.dart';
+import '../services/article_cache_database.dart';
 import '../services/bookmark_cache_database.dart';
 import '../services/readeck_api.dart';
 
@@ -46,6 +47,7 @@ class _BookmarksScreenState extends State<BookmarksScreen> {
     _repository = BookmarkRepository(
       api: _api,
       cacheDb: BookmarkCacheDatabase(),
+      articleCacheDb: ArticleCacheDatabase(),
     );
     _loadBookmarks();
   }
