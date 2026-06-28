@@ -125,7 +125,7 @@ void main() {
   });
 
   group('BookmarkRepository.archiveBookmark', () {
-    test('does NOT evict article from article cache', () async {
+    test('keeps article cache while archiving bookmark', () async {
       const id = 'bm-1';
 
       final articleCache = InMemoryArticleCacheDatabase();
