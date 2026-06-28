@@ -47,6 +47,7 @@ class _ArticleScreenState extends State<ArticleScreen> {
   List<TtsChunk> _ttsChunks = const [];
   int _ttsChunkIndex = 0;
   String _preferredTtsLanguage = 'en-US';
+  double _preferredTtsSpeed = ArticleTtsService.defaultSpeechRate;
   bool _fromCache = false;
   String? _error;
 
@@ -65,6 +66,7 @@ class _ArticleScreenState extends State<ArticleScreen> {
     _ttsService.setErrorHandler(_onTtsError);
     _ttsService.init();
     _loadPreferredTtsLanguage();
+    _loadPreferredTtsSpeed();
     _fetchArticle();
   }
 
@@ -79,6 +81,22 @@ class _ArticleScreenState extends State<ArticleScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() => _preferredTtsLanguage = 'en-US');
+    }
+  }
+
+  Future<void> _loadPreferredTtsSpeed() async {
+    try {
+      final value = await _authStorage.readTtsSpeed();
+      final speed = (value ?? ArticleTtsService.defaultSpeechRate).clamp(0.2, 1.0);
+      await _ttsService.setSpeechRate(speed);
+      if (!mounted) return;
+      setState(() => _preferredTtsSpeed = speed);
+      debugPrint('[TTS] preferred speed loaded=$_preferredTtsSpeed');
+    } catch (_) {
+      final fallback = ArticleTtsService.defaultSpeechRate;
+      await _ttsService.setSpeechRate(fallback);
+      if (!mounted) return;
+      setState(() => _preferredTtsSpeed = fallback);
     }
   }
 

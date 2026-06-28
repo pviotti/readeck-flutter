@@ -19,6 +19,7 @@ class AuthStorage {
   static const _azureOpenAiEndpointKey = 'azure_openai_endpoint';
   static const _azureOpenAiKeyKey = 'azure_openai_key';
   static const _ttsLanguageKey = 'tts_language';
+  static const _ttsSpeedKey = 'tts_speed';
 
   final FlutterSecureStorage _secureStorage;
 
@@ -151,5 +152,15 @@ class AuthStorage {
 
   Future<void> writeTtsLanguage(String languageCode) async {
     await _secureStorage.write(key: _ttsLanguageKey, value: languageCode);
+  }
+
+  Future<double?> readTtsSpeed() async {
+    final raw = await _secureStorage.read(key: _ttsSpeedKey);
+    if (raw == null) return null;
+    return double.tryParse(raw);
+  }
+
+  Future<void> writeTtsSpeed(double speed) async {
+    await _secureStorage.write(key: _ttsSpeedKey, value: speed.toString());
   }
 }

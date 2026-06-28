@@ -4,9 +4,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 class ArticleTtsService {
+  static const double defaultSpeechRate = 0.5;
+
   final FlutterTts _flutterTts;
   bool _isPlaying = false;
   bool _isPaused = false;
+  double _speechRate = defaultSpeechRate;
 
   ArticleTtsService({FlutterTts? flutterTts}) : _flutterTts = flutterTts ?? FlutterTts();
 
@@ -18,8 +21,8 @@ class ArticleTtsService {
     _log('init start');
     final sharedResult = await _flutterTts.setSharedInstance(true);
     _log('setSharedInstance(true) -> $sharedResult');
-    final speechRateResult = await _flutterTts.setSpeechRate(0.5);
-    _log('setSpeechRate(0.5) -> $speechRateResult');
+    final speechRateResult = await _flutterTts.setSpeechRate(_speechRate);
+    _log('setSpeechRate($_speechRate) -> $speechRateResult');
     final volumeResult = await _flutterTts.setVolume(1.0);
     _log('setVolume(1.0) -> $volumeResult');
     final pitchResult = await _flutterTts.setPitch(1.0);
@@ -109,4 +112,12 @@ class ArticleTtsService {
 
   bool get isPlaying => _isPlaying;
   bool get isPaused => _isPaused;
+  double get speechRate => _speechRate;
+
+  Future<void> setSpeechRate(double rate) async {
+    final normalizedRate = rate.clamp(0.2, 1.0);
+    final result = await _flutterTts.setSpeechRate(normalizedRate);
+    _speechRate = normalizedRate;
+    _log('setSpeechRate($normalizedRate) -> $result');
+  }
 }

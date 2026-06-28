@@ -13,6 +13,9 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  static const double _minTtsSpeed = 0.2;
+  static const double _maxTtsSpeed = 1.0;
+
   late final ArticleCacheDatabase _articleCacheDb;
   late final AuthStorage _authStorage;
   final _endpointController = TextEditingController();
@@ -21,9 +24,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _clearing = false;
   bool _savingAiSettings = false;
   bool _savingTtsLanguage = false;
+  bool _savingTtsSpeed = false;
   String? _error;
   String? _aiSettingsError;
   String? _ttsLanguage;
+  double _ttsSpeed = 0.5;
   int _cacheBytes = 0;
 
   @override
@@ -34,6 +39,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _loadCacheSize();
     _loadAiSettings();
     _loadTtsLanguage();
+    _loadTtsSpeed();
   }
 
   Future<void> _loadTtsLanguage() async {
@@ -66,6 +72,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } finally {
       if (mounted) {
         setState(() => _savingTtsLanguage = false);
+      }
+    }
+  }
+
+  Future<void> _loadTtsSpeed() async {
+    try {
+      final value = await _authStorage.readTtsSpeed();
+      if (!mounted) return;
+      setState(() => _ttsSpeed = (value ?? 0.5).clamp(_minTtsSpeed, _maxTtsSpeed));
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _ttsSpeed = 0.5);
+    }
+  }
+
+  Future<void> _saveTtsSpeed(double speed) async {
+    final normalized = speed.clamp(_minTtsSpeed, _maxTtsSpeed);
+
+    setState(() => _savingTtsSpeed = true);
+    try {
+      await _authStorage.writeTtsSpeed(normalized);
+      if (!mounted) return;
+      setState(() => _ttsSpeed = normalized);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('TTS speed saved.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to save TTS speed.')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _savingTtsSpeed = false);
       }
     }
   }
@@ -304,6 +344,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   items: const [
                     DropdownMenuItem(value: 'en-US', child: Text('English')),
                     DropdownMenuItem(value: 'it-IT', child: Text('Italian')),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Spoken reading speed',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${_ttsSpeed.toStringAsFixed(2)}x',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    Slider(
+                      value: _ttsSpeed,
+                      min: _minTtsSpeed,
+                      max: _maxTtsSpeed,
+                      divisions: 16,
+                      label: '${_ttsSpeed.toStringAsFixed(2)}x',
+                      onChanged: _savingTtsSpeed
+                          ? null
+                          : (value) {
+                              setState(() => _ttsSpeed = value);
+                            },
+                      onChangeEnd: _savingTtsSpeed ? null : _saveTtsSpeed,
+                    ),
                   ],
                 ),
               ),
