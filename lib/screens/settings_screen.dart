@@ -20,8 +20,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _loading = true;
   bool _clearing = false;
   bool _savingAiSettings = false;
+  bool _savingTtsLanguage = false;
   String? _error;
   String? _aiSettingsError;
+  String? _ttsLanguage;
   int _cacheBytes = 0;
 
   @override
@@ -31,6 +33,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _authStorage = const AuthStorage();
     _loadCacheSize();
     _loadAiSettings();
+    _loadTtsLanguage();
+  }
+
+  Future<void> _loadTtsLanguage() async {
+    try {
+      final language = await _authStorage.readTtsLanguage();
+      if (!mounted) return;
+      setState(() => _ttsLanguage = (language == 'it-IT' || language == 'en-US') ? language : 'en-US');
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _ttsLanguage = 'en-US');
+    }
+  }
+
+  Future<void> _saveTtsLanguage(String languageCode) async {
+    if (languageCode != 'en-US' && languageCode != 'it-IT') return;
+
+    setState(() => _savingTtsLanguage = true);
+    try {
+      await _authStorage.writeTtsLanguage(languageCode);
+      if (!mounted) return;
+      setState(() => _ttsLanguage = languageCode);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('TTS language saved.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to save TTS language.')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _savingTtsLanguage = false);
+      }
+    }
   }
 
   @override
@@ -245,6 +282,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         label: Text(_savingAiSettings ? 'Saving...' : 'Save AI settings'),
                       ),
                     ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.record_voice_over_outlined),
+                title: const Text('Spoken reading language'),
+                subtitle: const Text('Choose one language for article TTS playback.'),
+                trailing: DropdownButton<String>(
+                  value: _ttsLanguage ?? 'en-US',
+                  onChanged: _savingTtsLanguage
+                      ? null
+                      : (value) {
+                          if (value != null) {
+                            _saveTtsLanguage(value);
+                          }
+                        },
+                  items: const [
+                    DropdownMenuItem(value: 'en-US', child: Text('English')),
+                    DropdownMenuItem(value: 'it-IT', child: Text('Italian')),
                   ],
                 ),
               ),

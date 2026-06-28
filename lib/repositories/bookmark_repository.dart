@@ -91,6 +91,11 @@ class BookmarkRepository {
   Future<void> archiveBookmark(String id) async {
     await _api.archiveBookmark(id);
     await _cacheDb.archiveBookmark(id);
+    try {
+      await _articleCacheDb.deleteAllArticleTtsStates(id);
+    } catch (_) {
+      // Best-effort: TTS state eviction must not block archiving.
+    }
   }
 
   Future<void> deleteBookmark(String id) async {

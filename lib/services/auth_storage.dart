@@ -18,6 +18,7 @@ class AuthStorage {
   static const _pendingCreatedAtKey = 'pending_created_at';
   static const _azureOpenAiEndpointKey = 'azure_openai_endpoint';
   static const _azureOpenAiKeyKey = 'azure_openai_key';
+  static const _ttsLanguageKey = 'tts_language';
 
   final FlutterSecureStorage _secureStorage;
 
@@ -142,5 +143,13 @@ class AuthStorage {
   Future<void> clearAzureOpenAiSettings() async {
     await _secureStorage.delete(key: _azureOpenAiEndpointKey);
     await _secureStorage.delete(key: _azureOpenAiKeyKey);
+  }
+
+  Future<String?> readTtsLanguage() async {
+    return _secureStorage.read(key: _ttsLanguageKey);
+  }
+
+  Future<void> writeTtsLanguage(String languageCode) async {
+    await _secureStorage.write(key: _ttsLanguageKey, value: languageCode);
   }
 }
