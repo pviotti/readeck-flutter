@@ -69,7 +69,7 @@ class ArticleTtsService {
     });
   }
 
-  Future<void> speak({required String languageCode, required String text}) async {
+  Future<bool> speak({required String languageCode, required String text}) async {
     _log('speak start language=$languageCode textLength=${text.length}');
     final languageResult = await _flutterTts.setLanguage(languageCode);
     _log('setLanguage($languageCode) -> $languageResult');
@@ -79,6 +79,7 @@ class ArticleTtsService {
     final result = await _flutterTts.speak(text);
     _isPlaying = result == 1;
     _log('speak result=$result isPlaying=$_isPlaying');
+    return _isPlaying;
   }
 
   Future<void> pause() async {

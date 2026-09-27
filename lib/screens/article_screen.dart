@@ -125,25 +125,9 @@ class _ArticleScreenState extends State<ArticleScreen> {
     if (!mounted || _activeLanguage == null) return;
 
     if (_ttsChunkIndex + 1 < _ttsChunks.length) {
-      _ttsChunkIndex += 1;
-      final nextChunk = _ttsChunks[_ttsChunkIndex];
-      _ttsOffset = nextChunk.start;
-      _articleRepository
-          .saveTtsState(
-            id: widget.bookmark.id,
-            languageCode: _activeLanguage!,
-            text: _ttsText,
-            offset: _ttsOffset,
-            isPaused: false,
-          )
-.then((_) {
-            if (!mounted) return;
-            return _ttsService.speak(languageCode: _activeLanguage!, text: nextChunk.text);
-          })
-          .catchError((e, st) {
-            debugPrint('[TTS] failed to continue chunk playback: $e\n$st');
-            _onTtsError('$e');
-          });
+      final nextChunkIndex = _ttsChunkIndex + 1;
+      final nextChunk = _ttsChunks[nextChunkIndex];
+      _continueTtsChunk(nextChunkIndex, nextChunk);
       return;
     }
 
@@ -157,14 +141,44 @@ class _ArticleScreenState extends State<ArticleScreen> {
     });
   }
 
+  Future<void> _continueTtsChunk(int chunkIndex, TtsChunk chunk) async {
+    _ttsChunkIndex = chunkIndex;
+    try {
+      final didStart = await _ttsService.speak(
+        languageCode: _activeLanguage!,
+        text: chunk.text,
+      );
+      if (!didStart) {
+        _onTtsError('Native TTS did not start.');
+        return;
+      }
+      if (!mounted) return;
+
+      _ttsOffset = chunk.start;
+      await _articleRepository.saveTtsState(
+        id: widget.bookmark.id,
+        languageCode: _activeLanguage!,
+        text: _ttsText,
+        offset: _ttsOffset,
+        isPaused: false,
+      );
+    } catch (e, st) {
+      debugPrint('[TTS] failed to continue chunk playback: $e\n$st');
+      _onTtsError('$e');
+    }
+  }
+
   void _onTtsError(String _) {
     debugPrint('[TTS] UI error callback triggered');
     if (!mounted) return;
     setState(() {
       _ttsPlaying = false;
       _ttsBusy = false;
+      _ttsOffset = 0;
       _ttsChunks = const [];
       _ttsChunkIndex = 0;
+      _activeLanguage = null;
+      _ttsText = '';
     });
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('TTS failed for this article.')),
@@ -236,7 +250,14 @@ class _ArticleScreenState extends State<ArticleScreen> {
       final firstChunk = _ttsChunks.first;
       _ttsOffset = firstChunk.start;
       debugPrint('[TTS] chunks prepared count=${_ttsChunks.length} firstChunkLength=${firstChunk.text.length} firstChunkStart=${firstChunk.start}');
-      await _ttsService.speak(languageCode: languageCode, text: firstChunk.text);
+      final didStart = await _ttsService.speak(
+        languageCode: languageCode,
+        text: firstChunk.text,
+      );
+      if (!didStart) {
+        _onTtsError('Native TTS did not start.');
+        return;
+      }
       await _articleRepository.saveTtsState(
         id: widget.bookmark.id,
         languageCode: languageCode,
