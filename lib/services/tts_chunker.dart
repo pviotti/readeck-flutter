@@ -14,6 +14,14 @@ class TtsChunker {
   const TtsChunker({this.maxChunkLength = 400});
 
   List<TtsChunk> chunk(String text, {int startOffset = 0}) {
+    if (maxChunkLength <= 0) {
+      throw ArgumentError.value(
+        maxChunkLength,
+        'maxChunkLength',
+        'must be greater than zero',
+      );
+    }
+
     if (text.isEmpty || startOffset >= text.length) {
       return const [];
     }

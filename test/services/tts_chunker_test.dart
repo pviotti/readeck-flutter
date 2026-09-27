@@ -26,4 +26,11 @@ void main() {
     expect(chunks, isNotEmpty);
     expect(chunks.first.start >= 12, isTrue);
   });
+
+  test('rejects non-positive maximum chunk lengths', () {
+    for (final maxChunkLength in [0, -1]) {
+      final chunker = TtsChunker(maxChunkLength: maxChunkLength);
+      expect(() => chunker.chunk('Text'), throwsArgumentError);
+    }
+  });
 }
