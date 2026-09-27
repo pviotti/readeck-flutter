@@ -40,6 +40,7 @@ class _ArticleScreenState extends State<ArticleScreen> {
   bool _loading = true;
   bool _summarizing = false;
   bool _ttsBusy = false;
+  bool _ttsReady = false;
   bool _ttsPlaying = false;
   String? _activeLanguage;
   String _ttsText = '';
@@ -64,10 +65,21 @@ class _ArticleScreenState extends State<ArticleScreen> {
     _ttsService = ArticleTtsService();
     _ttsService.setCompletionHandler(_onTtsCompleted);
     _ttsService.setErrorHandler(_onTtsError);
-    _ttsService.init();
-    _loadPreferredTtsLanguage();
-    _loadPreferredTtsSpeed();
+    _initializeTts();
     _fetchArticle();
+  }
+
+  Future<void> _initializeTts() async {
+    try {
+      await _ttsService.init();
+      await _loadPreferredTtsLanguage();
+      await _loadPreferredTtsSpeed();
+      if (!mounted) return;
+      setState(() => _ttsReady = true);
+    } catch (e, st) {
+      debugPrint('[TTS] initialization failed: $e\n$st');
+      _onTtsError('$e');
+    }
   }
 
   Future<void> _loadPreferredTtsLanguage() async {
@@ -160,7 +172,7 @@ class _ArticleScreenState extends State<ArticleScreen> {
     debugPrint(
       '[TTS] playOrPause tapped language=$languageCode loading=$_loading ttsBusy=$_ttsBusy ttsPlaying=$_ttsPlaying activeLanguage=$_activeLanguage',
     );
-    if (_loading || _html == null) return;
+    if (_loading || _html == null || !_ttsReady) return;
     if (_ttsBusy) return;
 
     setState(() => _ttsBusy = true);
@@ -388,7 +400,7 @@ class _ArticleScreenState extends State<ArticleScreen> {
             tooltip: _preferredTtsLanguage == 'it-IT'
                 ? 'Play/Pause spoken reading (Italian)'
                 : 'Play/Pause spoken reading (English)',
-            onPressed: (_loading || _summarizing)
+            onPressed: (_loading || _summarizing || !_ttsReady)
                 ? null
                 : () => _playOrPauseTts(_preferredTtsLanguage),
           ),
