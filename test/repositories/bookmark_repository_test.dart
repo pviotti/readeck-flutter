@@ -14,6 +14,7 @@ import 'package:readeck/services/readeck_api.dart';
 
 class InMemoryArticleCacheDatabase extends ArticleCacheDatabase {
   final Map<String, String> _cache = <String, String>{};
+  final Map<String, Set<String>> _ttsStates = <String, Set<String>>{};
 
   @override
   Future<String?> fetchArticleHtml(String id) async => _cache[id];
@@ -28,7 +29,18 @@ class InMemoryArticleCacheDatabase extends ArticleCacheDatabase {
     _cache.remove(id);
   }
 
+  @override
+  Future<void> deleteAllArticleTtsStates(String articleId) async {
+    _ttsStates.remove(articleId);
+  }
+
+  void addTtsState(String articleId, String languageCode) {
+    _ttsStates.putIfAbsent(articleId, () => <String>{}).add(languageCode);
+  }
+
   bool contains(String id) => _cache.containsKey(id);
+  bool containsTtsState(String articleId, String languageCode) =>
+      _ttsStates[articleId]?.contains(languageCode) ?? false;
 
   @override
   void dispose() {}
@@ -125,11 +137,14 @@ void main() {
   });
 
   group('BookmarkRepository.archiveBookmark', () {
-    test('does NOT evict article from article cache', () async {
+    test('keeps article cache while archiving bookmark', () async {
       const id = 'bm-1';
 
       final articleCache = InMemoryArticleCacheDatabase();
       await articleCache.upsertArticleHtml(id, '<article>Cached</article>');
+      articleCache.addTtsState(id, 'en-US');
+      articleCache.addTtsState(id, 'it-IT');
+      articleCache.addTtsState('bm-2', 'en-US');
 
       final bookmarkCache = InMemoryBookmarkCacheDatabase();
 
@@ -144,6 +159,9 @@ void main() {
       await repo.archiveBookmark(id);
 
       expect(articleCache.contains(id), isTrue);
+      expect(articleCache.containsTtsState(id, 'en-US'), isFalse);
+      expect(articleCache.containsTtsState(id, 'it-IT'), isFalse);
+      expect(articleCache.containsTtsState('bm-2', 'en-US'), isTrue);
       expect(bookmarkCache.wasArchived(id), isTrue);
     });
   });

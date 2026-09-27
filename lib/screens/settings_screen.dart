@@ -13,6 +13,14 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
+  static const double _minTtsSpeed = 0.2;
+  static const double _maxTtsSpeed = 1.0;
+  static const double _normalTtsSpeed = 0.5;
+
+  // Displayed as a familiar playback multiplier where 1.0x == normal speed.
+  static double _engineToDisplay(double engineRate) => engineRate / _normalTtsSpeed;
+  static double _displayToEngine(double displaySpeed) => displaySpeed * _normalTtsSpeed;
+
   late final ArticleCacheDatabase _articleCacheDb;
   late final AuthStorage _authStorage;
   final _endpointController = TextEditingController();
@@ -20,8 +28,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _loading = true;
   bool _clearing = false;
   bool _savingAiSettings = false;
+  bool _savingTtsLanguage = false;
+  bool _savingTtsSpeed = false;
   String? _error;
   String? _aiSettingsError;
+  String? _ttsLanguage;
+  double _ttsSpeed = 0.5;
   int _cacheBytes = 0;
 
   @override
@@ -31,6 +43,76 @@ class _SettingsScreenState extends State<SettingsScreen> {
     _authStorage = const AuthStorage();
     _loadCacheSize();
     _loadAiSettings();
+    _loadTtsLanguage();
+    _loadTtsSpeed();
+  }
+
+  Future<void> _loadTtsLanguage() async {
+    try {
+      final language = await _authStorage.readTtsLanguage();
+      if (!mounted) return;
+      setState(() => _ttsLanguage = (language == 'it-IT' || language == 'en-US') ? language : 'en-US');
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _ttsLanguage = 'en-US');
+    }
+  }
+
+  Future<void> _saveTtsLanguage(String languageCode) async {
+    if (languageCode != 'en-US' && languageCode != 'it-IT') return;
+
+    setState(() => _savingTtsLanguage = true);
+    try {
+      await _authStorage.writeTtsLanguage(languageCode);
+      if (!mounted) return;
+      setState(() => _ttsLanguage = languageCode);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('TTS language saved.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to save TTS language.')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _savingTtsLanguage = false);
+      }
+    }
+  }
+
+  Future<void> _loadTtsSpeed() async {
+    try {
+      final value = await _authStorage.readTtsSpeed();
+      if (!mounted) return;
+      setState(() => _ttsSpeed = (value ?? 0.5).clamp(_minTtsSpeed, _maxTtsSpeed).toDouble());
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _ttsSpeed = 0.5);
+    }
+  }
+
+  Future<void> _saveTtsSpeed(double speed) async {
+    final normalized = speed.clamp(_minTtsSpeed, _maxTtsSpeed);
+
+    setState(() => _savingTtsSpeed = true);
+    try {
+      await _authStorage.writeTtsSpeed(normalized);
+      if (!mounted) return;
+      setState(() => _ttsSpeed = normalized);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('TTS speed saved.')),
+      );
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to save TTS speed.')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _savingTtsSpeed = false);
+      }
+    }
   }
 
   @override
@@ -244,6 +326,63 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             : const Icon(Icons.save_outlined),
                         label: Text(_savingAiSettings ? 'Saving...' : 'Save AI settings'),
                       ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              child: ListTile(
+                leading: const Icon(Icons.record_voice_over_outlined),
+                title: const Text('Spoken reading language'),
+                subtitle: const Text('Choose one language for article TTS playback.'),
+                trailing: DropdownButton<String>(
+                  value: _ttsLanguage ?? 'en-US',
+                  onChanged: _savingTtsLanguage
+                      ? null
+                      : (value) {
+                          if (value != null) {
+                            _saveTtsLanguage(value);
+                          }
+                        },
+                  items: const [
+                    DropdownMenuItem(value: 'en-US', child: Text('English')),
+                    DropdownMenuItem(value: 'it-IT', child: Text('Italian')),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Spoken reading speed',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${_engineToDisplay(_ttsSpeed).toStringAsFixed(2)}x',
+                      style: Theme.of(context).textTheme.bodyMedium,
+                    ),
+                    Slider(
+                      value: _engineToDisplay(_ttsSpeed),
+                      min: _engineToDisplay(_minTtsSpeed),
+                      max: _engineToDisplay(_maxTtsSpeed),
+                      divisions: 16,
+                      label: '${_engineToDisplay(_ttsSpeed).toStringAsFixed(2)}x',
+                      onChanged: _savingTtsSpeed
+                          ? null
+                          : (value) {
+                              setState(() => _ttsSpeed = _displayToEngine(value));
+                            },
+                      onChangeEnd: _savingTtsSpeed
+                          ? null
+                          : (value) => _saveTtsSpeed(_displayToEngine(value)),
                     ),
                   ],
                 ),
