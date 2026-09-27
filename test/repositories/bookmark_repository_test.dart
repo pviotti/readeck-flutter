@@ -3,6 +3,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
+import 'package:readeck/models/bookmark.dart';
 import 'package:readeck/repositories/bookmark_repository.dart';
 import 'package:readeck/services/article_cache_database.dart';
 import 'package:readeck/services/bookmark_cache_database.dart';
@@ -47,8 +48,30 @@ class InMemoryArticleCacheDatabase extends ArticleCacheDatabase {
 }
 
 class InMemoryBookmarkCacheDatabase extends BookmarkCacheDatabase {
+  final List<Bookmark> _bookmarks = [];
   final Set<String> _deleted = {};
   final Set<String> _archived = {};
+
+  void addBookmark(Bookmark bookmark) => _bookmarks.add(bookmark);
+
+  @override
+  Future<List<Bookmark>> fetchTopBookmarks({
+    required bool archived,
+    int limit = 30,
+  }) async => _bookmarks
+      .where((bookmark) => bookmark.isArchived == archived)
+      .take(limit)
+      .toList();
+
+  @override
+  Future<void> replaceTopBookmarks({
+    required bool archived,
+    required List<Bookmark> bookmarks,
+    int limit = 30,
+  }) async {
+    _bookmarks.removeWhere((bookmark) => bookmark.isArchived == archived);
+    _bookmarks.addAll(bookmarks.take(limit));
+  }
 
   @override
   Future<void> deleteBookmark(String id) async {
@@ -91,7 +114,64 @@ BookmarkRepository _makeRepository({
 // Tests
 // ---------------------------------------------------------------------------
 
+Bookmark _bookmark(String id) => Bookmark(
+  id: id,
+  title: 'Title',
+  url: 'https://example.com/$id',
+  siteName: 'Example',
+  description: '',
+  readingTime: 1,
+  readProgress: 0,
+  isMarked: false,
+  isArchived: false,
+  labels: const [],
+  thumbnailSrc: null,
+  created: DateTime.utc(2026),
+  published: null,
+);
+
 void main() {
+  group('BookmarkRepository.streamFirstPage', () {
+    test(
+      'does not mark cached data offline while remote request succeeds',
+      () async {
+        final bookmarkCache = InMemoryBookmarkCacheDatabase()
+          ..addBookmark(_bookmark('cached'));
+        final repo = _makeRepository(
+          httpClient: MockClient(
+            (_) async => http.Response(
+              '[{"id":"remote","created":"2026-01-01T00:00:00Z"}]',
+              200,
+              headers: {'total-count': '1'},
+            ),
+          ),
+          articleCache: InMemoryArticleCacheDatabase(),
+          bookmarkCache: bookmarkCache,
+        );
+
+        final values = await repo.streamFirstPage(archived: false).toList();
+
+        expect(values.map((value) => value.fromCache), [true, false]);
+        expect(values.map((value) => value.isOffline), [false, false]);
+      },
+    );
+
+    test('marks cached data offline after remote request fails', () async {
+      final bookmarkCache = InMemoryBookmarkCacheDatabase()
+        ..addBookmark(_bookmark('cached'));
+      final repo = _makeRepository(
+        httpClient: MockClient((_) async => throw Exception('offline')),
+        articleCache: InMemoryArticleCacheDatabase(),
+        bookmarkCache: bookmarkCache,
+      );
+
+      final values = await repo.streamFirstPage(archived: false).toList();
+
+      expect(values.map((value) => value.fromCache), [true, true]);
+      expect(values.map((value) => value.isOffline), [false, true]);
+    });
+  });
+
   group('BookmarkRepository.deleteBookmark', () {
     test('evicts matching article from article cache', () async {
       const id = 'bm-1';

@@ -9,11 +9,13 @@ class BookmarkStreamValue {
   final List<Bookmark> bookmarks;
   final int totalCount;
   final bool fromCache;
+  final bool isOffline;
 
   const BookmarkStreamValue({
     required this.bookmarks,
     required this.totalCount,
     required this.fromCache,
+    this.isOffline = false,
   });
 }
 
@@ -47,29 +49,38 @@ class BookmarkRepository {
       );
     }
 
+    BookmarksResponse remote;
     try {
-      final remote = await _api.getBookmarks(
+      remote = await _api.getBookmarks(
         limit: limit,
         offset: 0,
         archived: archived,
-      );
-
-      await _cacheDb.replaceTopBookmarks(
-        archived: archived,
-        bookmarks: remote.bookmarks,
-        limit: limit,
-      );
-
-      yield BookmarkStreamValue(
-        bookmarks: remote.bookmarks,
-        totalCount: remote.totalCount,
-        fromCache: false,
       );
     } catch (error) {
       if (cached.isEmpty) {
         rethrow;
       }
+
+      yield BookmarkStreamValue(
+        bookmarks: cached,
+        totalCount: cached.length,
+        fromCache: true,
+        isOffline: true,
+      );
+      return;
     }
+
+    await _cacheDb.replaceTopBookmarks(
+      archived: archived,
+      bookmarks: remote.bookmarks,
+      limit: limit,
+    );
+
+    yield BookmarkStreamValue(
+      bookmarks: remote.bookmarks,
+      totalCount: remote.totalCount,
+      fromCache: false,
+    );
   }
 
   Future<BookmarksResponse> fetchPage({
