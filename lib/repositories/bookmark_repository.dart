@@ -56,7 +56,9 @@ class BookmarkRepository {
         offset: 0,
         archived: archived,
       );
-    } catch (error) {
+    } on ReadeckApiException {
+      rethrow;
+    } catch (_) {
       if (cached.isEmpty) {
         rethrow;
       }
