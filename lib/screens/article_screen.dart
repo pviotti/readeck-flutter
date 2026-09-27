@@ -239,7 +239,7 @@ class _ArticleScreenState extends State<ArticleScreen> {
       debugPrint('[TTS] UI state updated playing=true activeLanguage=$_activeLanguage');
     } catch (e, st) {
       debugPrint('[TTS] playOrPause failed: $e\n$st');
-      rethrow;
+      _onTtsError('$e');
     } finally {
       if (mounted) {
         setState(() => _ttsBusy = false);
