@@ -136,7 +136,10 @@ class _ArticleScreenState extends State<ArticleScreen> {
             offset: _ttsOffset,
             isPaused: false,
           )
-          .then((_) => _ttsService.speak(languageCode: _activeLanguage!, text: nextChunk.text))
+.then((_) {
+            if (!mounted) return;
+            return _ttsService.speak(languageCode: _activeLanguage!, text: nextChunk.text);
+          })
           .catchError((e, st) {
             debugPrint('[TTS] failed to continue chunk playback: $e\n$st');
             _onTtsError('$e');
