@@ -15,6 +15,11 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   static const double _minTtsSpeed = 0.2;
   static const double _maxTtsSpeed = 1.0;
+  static const double _normalTtsSpeed = 0.5;
+
+  // Displayed as a familiar playback multiplier where 1.0x == normal speed.
+  static double _engineToDisplay(double engineRate) => engineRate / _normalTtsSpeed;
+  static double _displayToEngine(double displaySpeed) => displaySpeed * _normalTtsSpeed;
 
   late final ArticleCacheDatabase _articleCacheDb;
   late final AuthStorage _authStorage;
@@ -361,21 +366,23 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '${_ttsSpeed.toStringAsFixed(2)}x',
+                      '${_engineToDisplay(_ttsSpeed).toStringAsFixed(2)}x',
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
                     Slider(
-                      value: _ttsSpeed,
-                      min: _minTtsSpeed,
-                      max: _maxTtsSpeed,
+                      value: _engineToDisplay(_ttsSpeed),
+                      min: _engineToDisplay(_minTtsSpeed),
+                      max: _engineToDisplay(_maxTtsSpeed),
                       divisions: 16,
-                      label: '${_ttsSpeed.toStringAsFixed(2)}x',
+                      label: '${_engineToDisplay(_ttsSpeed).toStringAsFixed(2)}x',
                       onChanged: _savingTtsSpeed
                           ? null
                           : (value) {
-                              setState(() => _ttsSpeed = value);
+                              setState(() => _ttsSpeed = _displayToEngine(value));
                             },
-                      onChangeEnd: _savingTtsSpeed ? null : _saveTtsSpeed,
+                      onChangeEnd: _savingTtsSpeed
+                          ? null
+                          : (value) => _saveTtsSpeed(_displayToEngine(value)),
                     ),
                   ],
                 ),
