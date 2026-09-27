@@ -85,7 +85,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     try {
       final value = await _authStorage.readTtsSpeed();
       if (!mounted) return;
-      setState(() => _ttsSpeed = (value ?? 0.5).clamp(_minTtsSpeed, _maxTtsSpeed));
+      setState(() => _ttsSpeed = (value ?? 0.5).clamp(_minTtsSpeed, _maxTtsSpeed).toDouble());
     } catch (_) {
       if (!mounted) return;
       setState(() => _ttsSpeed = 0.5);
