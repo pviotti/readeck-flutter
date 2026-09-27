@@ -115,7 +115,7 @@ class ArticleTtsService {
   double get speechRate => _speechRate;
 
   Future<void> setSpeechRate(double rate) async {
-    final normalizedRate = rate.clamp(0.2, 1.0);
+    final normalizedRate = rate.clamp(0.2, 1.0).toDouble();
     final result = await _flutterTts.setSpeechRate(normalizedRate);
     _speechRate = normalizedRate;
     _log('setSpeechRate($normalizedRate) -> $result');
