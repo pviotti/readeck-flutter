@@ -87,7 +87,7 @@ class _ArticleScreenState extends State<ArticleScreen> {
   Future<void> _loadPreferredTtsSpeed() async {
     try {
       final value = await _authStorage.readTtsSpeed();
-      final speed = (value ?? ArticleTtsService.defaultSpeechRate).clamp(0.2, 1.0);
+      final speed = (value ?? ArticleTtsService.defaultSpeechRate).clamp(0.2, 1.0).toDouble();
       await _ttsService.setSpeechRate(speed);
       if (!mounted) return;
       setState(() => _preferredTtsSpeed = speed);
