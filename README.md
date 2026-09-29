@@ -1,10 +1,17 @@
 # Readeck Flutter
 
-This is a [Flutter] client application for [Readeck].
+This is an Android client application for [Readeck].  
 
-:construction: At the moment, this application:
-- only targets Linux and Android.
-- covers only a limited subset of Readeck functionalities
+Features:
+- simple, compact design
+- **text to speech**: read articles, even offline (multiple language supported)
+- **offline** read support
+- **summarization via AI** (optional; supports: Azure OpenAI APIs)
+
+<p>
+<img src="screenshots/readeck-unread.png" width="220" alt="Bookmarks screen">
+<img src="screenshots/readeck-article.png" width="220" alt="Article screen">
+</p>
 
 ## Development setup
 
@@ -23,16 +30,10 @@ If you need to confirm the available devices first:
 flutter devices
 ```
 
-Build and run on Linux:
-```bash
-flutter build linux
-flutter run -d linux
-```
-
 Build and run on Android:
 ```bash
 # Start an emulator or connect an Android device, then run:
-flutter run -d android
+flutter run -d android # or the id of your device
 
 # Or: build the APK and then run
 flutter build apk --debug
@@ -44,5 +45,4 @@ Run a local version of Readeck:
 docker run --rm -p 8000:8000 -v readeck-data:/readeck codeberg.org/readeck/readeck:latest
 ```
 
- [flutter]: https://flutter.dev/
  [readeck]: https://readeck.org
