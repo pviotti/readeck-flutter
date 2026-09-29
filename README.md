@@ -8,8 +8,8 @@ Features:
 - **offline** read support
 - **summarization via AI** (optional; supports: Azure OpenAI APIs)
 
-<img src="screenshots/readeck-unread.png" width="360" alt="Bookmarks screen">
-<img src="screenshots/readeck-article.png" width="360" alt="Bookmarks screen">
+<img src="screenshots/readeck-unread.png" width="220" alt="Bookmarks screen">
+<img src="screenshots/readeck-article.png" width="220" alt="Article screen">
 
 ## Development setup
 
