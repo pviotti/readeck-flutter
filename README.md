@@ -9,7 +9,8 @@ Features:
 - **summarization via AI** (optional; supports: Azure OpenAI APIs)
 
 <p>
-<img src="screenshots/readeck-unread.png" width="220" alt="Bookmarks screen"> <img src="screenshots/readeck-article.png" width="220" alt="Article screen">
+<img src="screenshots/readeck-unread.png" width="220" alt="Bookmarks screen">
+<img src="screenshots/readeck-article.png" width="220" alt="Article screen">
 </p>
 
 ## Development setup
