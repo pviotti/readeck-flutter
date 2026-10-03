@@ -1,0 +1,1 @@
+A client for managing and reading saved articles with Readeck.

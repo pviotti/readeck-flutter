@@ -1,0 +1,5 @@
+Readeck is a free and open-source Android client for your Readeck server. Browse saved bookmarks, read articles, and keep content available offline. Text-to-speech lets you listen to articles in supported languages.
+
+Optional article summarization can use an Azure OpenAI endpoint configured by the user. When used, article content is sent to that endpoint.
+
+Requires access to a Readeck server.
