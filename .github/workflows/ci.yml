@@ -67,6 +67,7 @@ jobs:
     name: Build Android
     runs-on: ubuntu-latest
     needs: test
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v'))
 
     steps:
       - uses: actions/checkout@v4
@@ -75,6 +76,8 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
 
       - uses: subosito/flutter-action@v2
         with:
@@ -85,14 +88,50 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Build Android APK
+      - name: Configure release signing
+        if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v')
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [[ -z "${!name}" ]]; then
+              echo "Missing required GitHub Actions secret: $name" >&2
+              exit 1
+            fi
+          done
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/release-key.jks
+          {
+            printf 'storeFile=release-key.jks\n'
+            printf 'storePassword=%s\n' "$ANDROID_KEYSTORE_PASSWORD"
+            printf 'keyAlias=%s\n' "$ANDROID_KEY_ALIAS"
+            printf 'keyPassword=%s\n' "$ANDROID_KEY_PASSWORD"
+          } > android/key.properties
+
+      - name: Build Android debug APK
+        if: github.event_name == 'pull_request'
         run: flutter build apk --debug
 
-      - name: Upload Android artifact
+      - name: Upload Android debug APK
         uses: actions/upload-artifact@v4
+        if: github.event_name == 'pull_request'
         with:
           name: readeck-android-debug
           path: build/app/outputs/flutter-apk/app-debug.apk
+
+      - name: Build Android release APK
+        if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v')
+        run: flutter build apk --release
+
+      - name: Upload Android release APK
+        uses: actions/upload-artifact@v4
+        if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v')
+        with:
+          name: readeck-android-release
+          path: build/app/outputs/flutter-apk/app-release.apk
 
   release-draft:
     name: Draft release
@@ -110,7 +149,7 @@ jobs:
       - name: Package artifacts
         run: |
           tar -czf readeck-linux.tar.gz -C artifacts/readeck-linux .
-          cp artifacts/readeck-android-debug/app-debug.apk readeck-android-debug.apk
+          cp artifacts/readeck-android-release/app-release.apk readeck-android-release.apk
 
       - name: Create draft release
         env:
@@ -119,4 +158,4 @@ jobs:
         run: |
           TAG=$(printf '%s' "$COMMIT_MESSAGE" | head -n1 | awk '{print $1}')
           gh release create "$TAG" --draft --target "$GITHUB_SHA" --title "$TAG" --generate-notes \
-            --repo "$GITHUB_REPOSITORY" readeck-linux.tar.gz readeck-android-debug.apk
+            --repo "$GITHUB_REPOSITORY" readeck-linux.tar.gz readeck-android-release.apk
