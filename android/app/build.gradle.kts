@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -19,6 +21,12 @@ android {
         buildConfig = true
     }
 
+    // The signed dependency metadata blob breaks reproducibility and F-Droid rejects it.
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = false
+    }
+
     defaultConfig {
         applicationId = "it.pviotti.readeck"
         // You can update the following values to match your application needs.
@@ -29,6 +37,24 @@ android {
         versionName = flutter.versionName
     }
 
+    // Without key.properties the release APK stays unsigned (needed for F-Droid builds).
+    val keyPropertiesFile = rootProject.file("key.properties")
+    if (keyPropertiesFile.exists()) {
+        val keyProperties = Properties().apply { keyPropertiesFile.inputStream().use { load(it) } }
+        signingConfigs {
+            create("release") {
+                storeFile = rootProject.file(keyProperties.getProperty("storeFile"))
+                storePassword = keyProperties.getProperty("storePassword")
+                keyAlias = keyProperties.getProperty("keyAlias")
+                keyPassword = keyProperties.getProperty("keyPassword")
+            }
+        }
+        buildTypes {
+            release {
+                signingConfig = signingConfigs.getByName("release")
+            }
+        }
+    }
 }
 
 kotlin {
