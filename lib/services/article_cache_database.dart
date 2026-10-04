@@ -235,7 +235,7 @@ class ArticleCacheDatabase {
   }
 
   void dispose() {
-    _db?.dispose();
+    _db?.close();
     _db = null;
   }
 
