@@ -87,8 +87,7 @@ jobs:
         run: flutter pub get
 
       - name: Configure release signing
-        # TEMP test signing 
-        #if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v')
+        if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v')
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -122,12 +121,12 @@ jobs:
           path: build/app/outputs/flutter-apk/app-debug.apk
 
       - name: Build Android release APK
-        #if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v')
+        if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v')
         run: flutter build apk --release
 
       - name: Upload Android release APK
         uses: actions/upload-artifact@v4
-        #if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v')
+        if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v')
         with:
           name: readeck-android-release
           path: build/app/outputs/flutter-apk/app-release.apk
