@@ -124,14 +124,14 @@ jobs:
 
       - name: Build Android release APK
         if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v')
-        run: flutter build apk --release
+        run: flutter build apk --release --split-per-abi
 
       - name: Upload Android release APK
         uses: actions/upload-artifact@v7
         if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v')
         with:
           name: readeck-android-release
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: build/app/outputs/flutter-apk/app-*-release.apk
 
   release-draft:
     name: Draft release
@@ -149,7 +149,9 @@ jobs:
       - name: Package artifacts
         run: |
           tar -czf readeck-linux.tar.gz -C artifacts/readeck-linux .
-          cp artifacts/readeck-android-release/app-release.apk readeck-android-release.apk
+          for apk in artifacts/readeck-android-release/app-*-release.apk; do
+            cp "$apk" "readeck-android-$(basename "$apk" | sed 's/^app-//')"
+          done
 
       - name: Create draft release
         env:
@@ -158,4 +160,4 @@ jobs:
         run: |
           TAG=$(printf '%s' "$COMMIT_MESSAGE" | head -n1 | awk '{print $1}')
           gh release create "$TAG" --draft --target "$GITHUB_SHA" --title "$TAG" --generate-notes \
-            --repo "$GITHUB_REPOSITORY" readeck-linux.tar.gz readeck-android-release.apk
+            --repo "$GITHUB_REPOSITORY" readeck-linux.tar.gz readeck-android-*-release.apk
