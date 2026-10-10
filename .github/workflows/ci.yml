@@ -85,8 +85,11 @@ jobs:
           channel: stable
           cache: true
 
+      # F-Droid uses a workspace-local pub cache; embedded paths must match for reproducibility.
       - name: Install dependencies
-        run: flutter pub get
+        env:
+          PUB_CACHE: ${{ github.workspace }}/.pub-cache
+        run: flutter pub get --enforce-lockfile
 
       - name: Configure release signing
         if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v')
@@ -124,7 +127,13 @@ jobs:
 
       - name: Build Android release APK
         if: github.event_name == 'push' && startsWith(github.event.head_commit.message, 'v')
-        run: flutter build apk --release --split-per-abi
+        env:
+          PUB_CACHE: ${{ github.workspace }}/.pub-cache
+        # One build per ABI so NativeAssetsManifest.json matches F-Droid's per-ABI builds (reproducibility).
+        run: |
+          for platform in android-arm android-arm64 android-x64; do
+            flutter build apk --release --split-per-abi --target-platform="$platform"
+          done
 
       - name: Upload Android release APK
         uses: actions/upload-artifact@v7
