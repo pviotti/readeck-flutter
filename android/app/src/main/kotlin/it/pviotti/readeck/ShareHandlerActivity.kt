@@ -8,10 +8,15 @@ import android.util.Log
 import org.json.JSONObject
 import java.io.OutputStreamWriter
 import java.net.HttpURLConnection
+import java.net.SocketTimeoutException
 import java.net.URI
 import java.net.URL
+import java.net.UnknownHostException
+import javax.net.ssl.SSLException
 
 private const val TAG = "ReadeckShare"
+
+private class HttpStatusException(val status: Int) : RuntimeException("Unexpected status: $status")
 
 class ShareHandlerActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -46,26 +51,43 @@ class ShareHandlerActivity : Activity() {
         if (BuildConfig.DEBUG) Log.d(TAG, "Credentials found: baseUrl=$baseUrl")
 
         Thread {
-            val success =
+            val failure: Exception? =
                 try {
                     if (BuildConfig.DEBUG) Log.d(TAG, "Posting bookmark to $baseUrl/api/bookmarks")
                     postBookmark(baseUrl, accessToken, url, subject)
-                    true
+                    null
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to post bookmark", e)
-                    false
+                    e
                 }
 
             runOnUiThread {
                 val message =
-                    if (success) "Bookmark sent to Readeck."
-                    else "Failed to save the bookmark."
+                    if (failure == null) "Bookmark sent to Readeck."
+                    else "Failed to save the bookmark: ${describeFailure(failure)}"
                 Log.d(TAG, message)
-                Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
+                Toast.makeText(
+                    this,
+                    message,
+                    if (failure == null) Toast.LENGTH_SHORT else Toast.LENGTH_LONG,
+                ).show()
                 finish()
             }
         }.start()
     }
+
+    private fun describeFailure(e: Exception): String =
+        when {
+            e is UnknownHostException -> "server not found."
+            e is SocketTimeoutException -> "server timed out."
+            e is SSLException -> "secure connection failed."
+            e.message?.contains("Cleartext", ignoreCase = true) == true ->
+                "plain HTTP is blocked."
+            e is HttpStatusException && (e.status == 401 || e.status == 403) ->
+                "session expired, sign in again."
+            e is HttpStatusException -> "server returned ${e.status}."
+            else -> "could not reach the server."
+        }
 
     private fun extractSharedText(): String? {
         if (intent?.action != Intent.ACTION_SEND) return null
@@ -101,7 +123,7 @@ class ShareHandlerActivity : Activity() {
 
             val statusCode = connection.responseCode
             Log.d(TAG, "POST /bookmarks response: $statusCode")
-            if (statusCode != 202) throw RuntimeException("Unexpected status: $statusCode")
+            if (statusCode != 202) throw HttpStatusException(statusCode)
         } finally {
             connection.disconnect()
         }
