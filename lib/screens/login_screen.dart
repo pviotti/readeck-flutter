@@ -166,6 +166,9 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
+  bool get _isInsecureUrl =>
+      _urlController.text.trim().toLowerCase().startsWith('http://');
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -212,6 +215,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                     keyboardType: TextInputType.url,
                     autocorrect: false,
+                    onChanged: (_) => setState(() {}),
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
                         return 'Please enter your Readeck server URL';
@@ -223,6 +227,29 @@ class _LoginScreenState extends State<LoginScreen> {
                       return null;
                     },
                   ),
+                  if (_isInsecureUrl) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(
+                          Icons.warning_amber_rounded,
+                          size: 18,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'This URL uses plain HTTP. Your access token and saved links will be sent unencrypted. Use HTTPS unless the server is on a trusted private network.',
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: Theme.of(context).colorScheme.error,
+                                ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   if (_awaitingRedirect) ...[
                     const SizedBox(height: 16),
                     Container(
